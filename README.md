@@ -52,7 +52,7 @@ for (int i = 0; i < bitmapLength; i ++) {
 ```
 
 ###Chunk
-管理策略等同于io.netty.buffer.PoolChunk，本段可以认为是对PoolSubpage的解析。
+管理策略等同于io.netty.buffer.PoolChunk，本段可以认为是对PoolChunk的解析。
 ####基本描述
 - 一个page是chunk能够分配的最小内存单位。
 - chunk是pages的集合。
@@ -84,6 +84,8 @@ for (int i = 0; i < bitmapLength; i ++) {
 例如：node2048(8k)上已被分配，node2049～node4195未被分配， 则node1024无法响应16k的分配请求，需要在node1025上分配，但是node1024上仍可以响应8k的分配请求。
  3) x = maxOrder + 1 => 这个节点和其下字节点都已经被分配完毕。
 
+
+
 ####分配算法
   -  **allocateNode(d)** => 在高度h上从左向右查找第一个可用的节点 
  1) 从 depth = 0 (node_id = 1)开始遍历
@@ -104,28 +106,31 @@ for (int i = 0; i < bitmapLength; i ++) {
  2) 根据normCapacity构造和初始化Subpage对象实例，并放入内部属性PoolSubpage<T>[] subpages中，对应的叶子节点的node_id即是其下标值，便于后续方便查找。
  
 
+###PoolChunkList
+PoolChunkList维护了两个链表，一个是PoolChunkList之间的链表，一个是PoolChunkList内部PoolChunk的链表。
+- **PoolChunkList之间的链表**：根据minUsage和maxUsage定义的使用量进行划分为qInit，q000，q025，q050，q075, q100六个不同的区间，内存分配优先级为q050=>q025=>q000=>qInit=>q075。两个相邻的chunkList，前一个的maxUsage和后一个的minUsage必须有一段交叉值进行缓冲，否则会出现某个chunk的usage处于临界值，而导致不停的在两个chunk间移动。
+- **PoolChunkList内部PoolChunk链表**内存分配的时候，从内部PoolChunk链表head开始，尝试分配所需内存，如果分配失败，则尝试next chunk，不断循环直到成功。分配成功后，判断当前已分配的总使用量是否超过maxUsage， 若超过， 则将此chunk移动到前一个PoolChunkList链表中。
 
-
- ###Arena
+###Arena
  Arena负责管理Arena内所有被分配的内存。
 
  与Netty不同， 当前Arena不实现与线程的绑定，以及Cache。
- ####针对tiny的内存管理
+####针对tiny的内存管理
  使用Subpage[]来记录所有已分配tiny大小内存的Subpages，数组下标为normCapacity>>>4,也就是length=32，里面存放的是对应Subpage.head。
 
- ####针对small的内存管理
+####针对small的内存管理
  使用Subpage[]来记录所有已分配small大小内存的Subpages，数组length=4 (参见“内存分配策略”)，里面存放的是对应Subpage.head。
 
- ####针对large的内存管理
- 使用qInit，q000，q025，q050，q100这5个PoolChunkList来记录所有已分配的Chunk清单。
+####针对large的内存管理
+ 使用qInit，q000，q025，q050，q075，q100这5个PoolChunkList按照使用率来记录所有已分配的Chunk清单。
 
- ####针对huge的内存管理
+####针对huge的内存管理
  小于1/2ArenaSize的huge内存同large的内存管理方式。
  
- ####针对superHuge的内存管理
+####针对superHuge的内存管理
  大于1/2ArenaSize的huge内存，直接使用MycatBigMemoryBuf[] superHuge来存放引用。
 
- ####内存分配锁
+####内存分配锁
  
  
 ##MycatBigMemoryAllocator
