@@ -56,7 +56,7 @@ public abstract class Arena<T> {
         qInit.setPre(qInit);
         
 	}
-	private BaseByteBuffer<T> allocateBuffer(int capacity) {
+	public BaseByteBuffer<T> allocateBuffer(int capacity) {
 		BaseByteBuffer<T> buffer = newBuffer();
 		allocate(buffer, capacity);
 		return buffer;
@@ -82,7 +82,7 @@ public abstract class Arena<T> {
 			synchronized (this) {
 				final Subpage<T> head = table[tableId];
 				final Subpage<T> s = head.next;
-				if(s != null) {
+				if(s != head) {
 					long handle = s.allocate();
 					s.getChunk().initBuf(buffer, handle, normalSize);
 					return ;
