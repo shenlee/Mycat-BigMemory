@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 import junit.framework.Assert;
+
 import org.junit.Test;
 
-import io.mycat.memory.DirectByteBufferPool;
 import sun.nio.ch.DirectBuffer;
 
 public class TestDirectByteBufferPool {

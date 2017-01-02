@@ -2,9 +2,13 @@ package io.mycat.bigmem.util;
 
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -22,6 +26,9 @@ public final class UnsafeUtil {
 	private static final Unsafe theUnsafe = tryUnsafe();
 
 	private static final VMDetail vmDetail = new VMDetail();
+	
+	  private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
+	            "\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
 	private static Unsafe tryUnsafe() {
 		return AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
@@ -41,6 +48,11 @@ public final class UnsafeUtil {
 
 	public static Unsafe getUnsafe() {
 		return theUnsafe;
+	}
+	
+	public boolean hasUnsafe()
+	{
+		return theUnsafe != null;
 	}
 
 	/**
@@ -155,6 +167,82 @@ public final class UnsafeUtil {
 	public static void freeMemory(long address) {
 		theUnsafe.freeMemory(address);
 	}
+	
+    static ClassLoader getSystemClassLoader() {
+        if (System.getSecurityManager() == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
+        }
+    }
+    
+    /**
+     * 
+     * @return 
+     */
+	public static long maxDirectMemory() {
+	        long maxDirectMemory = 0;
+	        ClassLoader systemClassLoader = null;
+	        try {
+	            // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
+	            systemClassLoader = getSystemClassLoader();
+	            Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
+	            Method m = vmClass.getDeclaredMethod("maxDirectMemory");
+	            maxDirectMemory = ((Number) m.invoke(null)).longValue();
+	        } catch (Throwable ignored) {
+	            // Ignore
+	        }
+
+	        if (maxDirectMemory > 0) {
+	            return maxDirectMemory;
+	        }
+
+	        try {
+	        		String val = getVMOption("MaxDirectMemorySize");
+	                Matcher m = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN.matcher(val);
+	                if (m.matches()) {
+	                maxDirectMemory = Long.parseLong(m.group(1));
+	                switch (m.group(2).charAt(0)) {
+	                    case 'k': case 'K':
+	                        maxDirectMemory *= 1024;
+	                        break;
+	                    case 'm': case 'M':
+	                        maxDirectMemory *= 1024 * 1024;
+	                        break;
+	                    case 'g': case 'G':
+	                        maxDirectMemory *= 1024 * 1024 * 1024;
+	                        break;
+	                }
+	            }
+	        } catch (Throwable ignored) {
+	            // Ignore
+	        }
+
+	        if (maxDirectMemory <= 0) {
+	            maxDirectMemory = Runtime.getRuntime().maxMemory();
+	            LOGGER.debug("maxDirectMemory: {} bytes (maybe)", maxDirectMemory);
+	        } else {
+	        	LOGGER.debug("maxDirectMemory: {} bytes", maxDirectMemory);
+	        }
+
+	        return maxDirectMemory;
+	    }
+	
+	public static String getVMOption(String key) throws Exception {
+		MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+		ObjectName mbean = new ObjectName(
+				"com.sun.management:type=HotSpotDiagnostic");
+		CompositeDataSupport val = (CompositeDataSupport) server.invoke(
+				mbean, "getVMOption", new Object[] { key },
+				new String[] { "java.lang.String" });
+		return val.get("value").toString();
+	}
+
 
 	private static class VMDetail {
 		private final int objectHeaderSize;
@@ -250,19 +338,11 @@ public final class UnsafeUtil {
 			return objectAddress;
 		}
 
-		private String getString(String key) throws Exception {
-			MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-			ObjectName mbean = new ObjectName(
-					"com.sun.management:type=HotSpotDiagnostic");
-			CompositeDataSupport val = (CompositeDataSupport) server.invoke(
-					mbean, "getVMOption", new Object[] { key },
-					new String[] { "java.lang.String" });
-			return val.get("value").toString();
-		}
+
 
 		public Boolean useCompressedOops() {
 			try {
-				return Boolean.valueOf(getString("UseCompressedOops"));
+				return Boolean.valueOf(getVMOption("UseCompressedOops"));
 			} catch (Exception exp) {
 				LOGGER.error(exp.getMessage(), exp);
 				return null;
@@ -272,7 +352,7 @@ public final class UnsafeUtil {
 		public Integer objectAlignmentInBytes() {
 			if (Boolean.TRUE.equals(useCompressedOops())) {
 				try {
-					return Integer.valueOf(getString("ObjectAlignmentInBytes"));
+					return Integer.valueOf(getVMOption("ObjectAlignmentInBytes"));
 				} catch (Exception exp) {
 					LOGGER.error(exp.getMessage(), exp);
 					return null;
