@@ -1,7 +1,6 @@
 package io.mycat.bigmem.buffer;
 
 import io.mycat.bigmem.util.MathUtil;
-import sun.nio.ch.DirectBuffer;
 
 /**
 ** @desc:
@@ -106,59 +105,62 @@ public abstract class Arena<T> {
 	*@auth zhangwy @date 2017年1月2日 下午8:59:37
 	**/
 	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity, int normalSize) {
+		
 	}
+	
 	/**
 	*@desc
 	*@auth zhangwy @date 2017年1月2日 下午8:58:50
 	**/
 	private synchronized void allocateNormal(BaseByteBuffer<T> buffer, int capacity, int normalSize) {
-		 if (q050.allocate(buffer, capacity, normalSize) || q025.allocate(buffer, capacity, normalSize) ||
-		            q000.allocate(buffer, capacity, normalSize) || qInit.allocate(buffer, capacity, normalSize) ||
-		            q075.allocate(buffer, capacity, normalSize) || q100.allocate(buffer, capacity, normalSize)) {
-		            return;
-		        }
+		if (q050.allocate(buffer, capacity, normalSize) || q025.allocate(buffer, capacity, normalSize) ||
+	            q000.allocate(buffer, capacity, normalSize) || qInit.allocate(buffer, capacity, normalSize) ||
+	            q075.allocate(buffer, capacity, normalSize) || q100.allocate(buffer, capacity, normalSize)) {
+	            return;
+	        }
 
-		        // Add a new chunk.
-		       	Chunk<T> c = newChunk();
-		        long handle = c.allocate(normalSize);
-		        assert handle > 0;
-		        c.initBuf(buffer, handle, capacity);
-		        qInit.addChunk(c);
+        // Add a new chunk.
+       	Chunk<T> c = newChunk();
+        long handle = c.allocate(normalSize);
+        assert handle > 0;
+        c.initBuf(buffer, handle, capacity);
+        qInit.addChunk(c);
 	}
+	
 	int normalizeCapacity(int reqCapacity) {
-	        if (reqCapacity < 0) {
-	            throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
-	        }
-	        if (reqCapacity >= chunkSize) {
-	            return reqCapacity;
-	        }
-
-	        if (!isTiny(reqCapacity)) { // >= 512
-	            // Doubled
-
-	            int normalizedCapacity = reqCapacity;
-	            normalizedCapacity --;
-	            normalizedCapacity |= normalizedCapacity >>>  1;
-	            normalizedCapacity |= normalizedCapacity >>>  2;
-	            normalizedCapacity |= normalizedCapacity >>>  4;
-	            normalizedCapacity |= normalizedCapacity >>>  8;
-	            normalizedCapacity |= normalizedCapacity >>> 16;
-	            normalizedCapacity ++;
-
-	            if (normalizedCapacity < 0) {
-	                normalizedCapacity >>>= 1;
-	            }
-
-	            return normalizedCapacity;
-	        }
-
-	        // Quantum-spaced
-	        if ((reqCapacity & 15) == 0) {
-	            return reqCapacity;
-	        }
-
-	        return (reqCapacity & ~15) + 16;
-	    }
+		if (reqCapacity < 0) {
+		    throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
+		}
+		if (reqCapacity >= chunkSize) {
+		    return reqCapacity;
+		}
+		
+		if (!isTiny(reqCapacity)) { // >= 512
+		    // Doubled
+		
+		    int normalizedCapacity = reqCapacity;
+		    normalizedCapacity --;
+		    normalizedCapacity |= normalizedCapacity >>>  1;
+		    normalizedCapacity |= normalizedCapacity >>>  2;
+		    normalizedCapacity |= normalizedCapacity >>>  4;
+		    normalizedCapacity |= normalizedCapacity >>>  8;
+		    normalizedCapacity |= normalizedCapacity >>> 16;
+		    normalizedCapacity ++;
+		
+		    if (normalizedCapacity < 0) {
+		        normalizedCapacity >>>= 1;
+		    }
+		
+		    return normalizedCapacity;
+		}
+		
+		// Quantum-spaced
+		if ((reqCapacity & 15) == 0) {
+		    return reqCapacity;
+		}
+		
+		return (reqCapacity & ~15) + 16;
+	}
 	/**
 	*@desc
 	*@auth zhangwy @date 2016年12月31日 上午9:52:21
@@ -203,8 +205,17 @@ public abstract class Arena<T> {
 	*@return: void
 	*@auth: zhangwy @date: 2016年12月31日 上午8:06:57
 	**/
-	private void tableId(int nromalSize) {
-		
+	public Subpage<T> findSubpagePoolHead(int normalSize) {
+		Subpage<T>[] table;
+		int tableId;
+		if(isTiny(normalSize)) {
+			table = tinySubpagePool;
+			tableId = tinyId(normalSize);
+		} else {
+			table = smallSubpagePool;
+			tableId = smallId(normalSize);
+		}
+		return table[tableId];
 	}
 	/**创建一个新的chunk
 	*@desc

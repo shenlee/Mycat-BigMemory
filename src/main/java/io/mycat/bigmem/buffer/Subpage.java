@@ -4,7 +4,7 @@ package io.mycat.bigmem.buffer;
 *@author: zhangwy   @date: 2016年12月28日 上午6:51:00
 **/
 public class Subpage<T> {
-	private Chunk chunk; /*属于哪个chunk*/
+	private Chunk<T> chunk; /*属于哪个chunk*/
 	private int memoryMapIdx; /*chunk中的memoryIdx*/
 	private long runOffset; /*地址偏移*/
 	private long pageSize; /*pageSize*/
@@ -49,11 +49,24 @@ public class Subpage<T> {
 	}
 		
 	private void addPool() {
-		
+		Subpage<T> header = this.chunk.getArena().findSubpagePoolHead(elememtSize);
+		this.next = header.next;
+		if(header.next != null) {
+			header.next.prev = this;
+		}
+		header.next = this;
+		this.prev = header;
 	}
 	
 	private void removePool() {
-		
+		Subpage<T> header = this.chunk.getArena().findSubpagePoolHead(elememtSize);
+		prev.next = next;
+		if(next != null){
+			next.prev = prev;
+		}
+		next = null;
+		prev = null;
+				
 	}
 	/*分配一个elementSize的大小*/
 	public long allocate() {
@@ -103,6 +116,12 @@ public class Subpage<T> {
 	 */
 	public Chunk getChunk() {
 		return chunk;
+	}
+	/**
+	 * @return the elememtSize
+	 */
+	public int getElememtSize() {
+		return elememtSize;
 	}
     public static void main(String[] args) {
 

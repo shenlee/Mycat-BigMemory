@@ -1,9 +1,4 @@
 package io.mycat.bigmem.buffer;
-import java.nio.ByteBuffer;
-
-import javax.imageio.stream.MemoryCacheImageOutputStream;
-
-import sun.nio.ch.DirectBuffer;
 
 /**
 *@desc:
@@ -92,6 +87,10 @@ public class Chunk<T> {
 		}
 		return memoryMapId;
 	}
+	/** 初始化byteBuffer
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午9:17:28
+	**/
 	public void initBuf(BaseByteBuffer<T> byteBuffer ,long handle, int capacity) {
 		 int memoryMapIdx = (int) handle;
 	        int bitmapIdx = (int) (handle >>> Integer.SIZE);
@@ -103,11 +102,16 @@ public class Chunk<T> {
 	            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
 	        } 
 	}
-	/**
+	/** 初始化small 或者tiny类型的bytebuffer
 	*@desc
 	*@auth zhangwy @date 2017年1月2日 下午9:17:28
 	**/
 	private void initBufWithSubpage(BaseByteBuffer<T> byteBuffer, long handle, int bitmapIdx, int capacity) {
+		bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
+        int memoryMapIdx = (int) handle;
+		Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
+		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
+				capacity, subpage.getElememtSize());
 	}
 	/**
 	*@desc:
@@ -229,6 +233,9 @@ public class Chunk<T> {
 			return 99;
 		}
 		return usePercent;
+	}
+	public Arena<T> getArena() {
+		return this.arena;
 	}
 	public static void main(String[] args) {
 		System.out.println(log2(8192));
