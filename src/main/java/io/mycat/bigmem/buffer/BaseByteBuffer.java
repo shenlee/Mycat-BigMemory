@@ -3,21 +3,34 @@ package io.mycat.bigmem.buffer;
 import io.mycat.bigmem.util.ByteUtil;
 
 public abstract class BaseByteBuffer<T> {
-	private long address ;
-	private long size ;
-	private long readerIndex;
-	private long writerIndex;
-	
+	protected long offset ;
+	protected long capacity ;
+	protected long maxCapacity;
+	protected long readerIndex;
+	protected long writerIndex;
+	protected T memory;
+	protected Chunk<T> chunk;
+	protected long handle;
 	
 	public long readerIndex() {
 		return readerIndex;
 	}
 	
+	protected void setMaxCapacity(int maxCapacity) {
+		this.maxCapacity = maxCapacity;
+	}
 	
 	public long writerIndex() {
 		return writerIndex;
 	}
-	public abstract void init();
+	public void init(Chunk<T> chunk,long handle, long offset,int capacity, int maxCapacity) {
+		this.chunk = chunk;
+		this.memory = chunk.getMemory();
+		this.handle = handle;
+		this.offset = offset;
+		this.capacity = capacity;
+		this.maxCapacity = maxCapacity;
+	};
 	public abstract byte getByte(long readerIndex);
 	public abstract short getShort(long readerIndex);
 	public abstract int getInt(long readerIndex);
@@ -25,12 +38,12 @@ public abstract class BaseByteBuffer<T> {
 	public abstract float getFloat(long readerIndex);
 	public abstract double getDouble(long readerIndex);
 
-	public abstract byte putByte(long readerIndex, byte value);
-	public abstract byte putShort(long readerIndex, short value);
-	public abstract byte putInt(long readerIndex, int value);
-	public abstract byte putLong(long readerIndex, long value);
-	public abstract byte putfloat(long readerIndex, float value);
-	public abstract byte putdouble(long readerIndex, double value);
+	public abstract void putByte(long readerIndex, byte value);
+	public abstract void putShort(long readerIndex, short value);
+	public abstract void putInt(long readerIndex, int value);
+	public abstract void putLong(long readerIndex, long value);
+	public abstract void putfloat(long readerIndex, float value);
+	public abstract void putdouble(long readerIndex, double value);
 	
     public  byte _getByte(long readerIndex) {
         return ByteUtil.getByte(addr(readerIndex));
@@ -74,11 +87,11 @@ public abstract class BaseByteBuffer<T> {
     public  void _putDouble(long readerIndex, double value) {
         ByteUtil.putLong(addr(readerIndex), Double.doubleToLongBits(value));
     }
-    private  long addr(long readerIndex) {
+    protected  long addr(long readerIndex) {
     	if(readerIndex > writerIndex) {
     		throw new IndexOutOfBoundsException("readerIndex can't max smaller writeIndex");
     	}
-    	return address + readerIndex;
+    	return offset + readerIndex;
     }
 		
 }

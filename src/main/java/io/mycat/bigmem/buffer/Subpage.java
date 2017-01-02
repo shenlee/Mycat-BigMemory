@@ -23,9 +23,11 @@ public class Subpage<T> {
 		this.chunk = null;
 		this.elememtSize = pageSize;
 		this.bitMap = null;
+		this.prev = this;
+		this.next = this;
 	}
 	/*作为chunk的初始化*/
-	public Subpage(Chunk chunk,int memoryMapIdx, long pageSize, int size) {
+	public Subpage(Chunk<T> chunk,int memoryMapIdx, long pageSize, int size) {
 		this.memoryMapIdx = memoryMapIdx;
 		this.chunk = chunk;
 		this.pageSize = pageSize;
@@ -96,6 +98,12 @@ public class Subpage<T> {
     private long toHandle(long bitmapIdx) {
         return 0x4000000000000000L | (long) bitmapIdx << 32 | memoryMapIdx;
     }
+    /**
+	 * @return the chunk
+	 */
+	public Chunk getChunk() {
+		return chunk;
+	}
     public static void main(String[] args) {
 
     	System.out.println(Integer.toBinaryString(0xffffffff));
