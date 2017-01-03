@@ -1,9 +1,4 @@
 package io.mycat.bigmem.buffer;
-import java.nio.ByteBuffer;
-
-import javax.imageio.stream.MemoryCacheImageOutputStream;
-
-import sun.nio.ch.DirectBuffer;
 
 /**
 *@desc:
@@ -60,7 +55,9 @@ public class Chunk<T> {
 		}
 		freeBytes = chunkSize;
 	}
-	
+	public T getMemory() {
+		return memory;
+	}
 	public long allocate(int normalSize) {
 		if((normalSize & maskSubpage) != 0) {
 			return allocateRun(normalSize);
@@ -84,13 +81,37 @@ public class Chunk<T> {
 		Subpage<T> subpage = subpagesList[subpageId(memoryMapId)];
 		if(subpage == null) {
 			subpage = new Subpage(this, memoryMapId, pageSize, normalSize);
+			subpagesList[subpageId(memoryMapId)] = subpage;
 		} else {
 			subpage.initSubpage(normalSize);
 		}
 		return memoryMapId;
 	}
-	public void initBuf(BaseByteBuffer<T> byteBuffer ,long handle, int normalSize ) {
-		
+	/** 初始化byteBuffer
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午9:17:28
+	**/
+	public void initBuf(BaseByteBuffer<T> byteBuffer ,long handle, int capacity) {
+		 int memoryMapIdx = (int) handle;
+	        int bitmapIdx = (int) (handle >>> Integer.SIZE);
+	        if (bitmapIdx == 0) {
+	            byte val = value(memoryMapIdx);
+	            assert val == unusable : String.valueOf(val);
+	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
+	        } else {
+	            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
+	        } 
+	}
+	/** 初始化small 或者tiny类型的bytebuffer
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午9:17:28
+	**/
+	private void initBufWithSubpage(BaseByteBuffer<T> byteBuffer, long handle, int bitmapIdx, int capacity) {
+		bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
+        int memoryMapIdx = (int) handle;
+		Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
+		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
+				capacity, subpage.getElememtSize());
 	}
 	/**
 	*@desc:
@@ -203,7 +224,6 @@ public class Chunk<T> {
 	}
 	
 	public int usage() {
-		
 		int usePercent = 0;
 		if(freeBytes == 0) {
 			return 100;
@@ -214,6 +234,9 @@ public class Chunk<T> {
 		}
 		return usePercent;
 	}
+	public Arena<T> getArena() {
+		return this.arena;
+	}
 	public static void main(String[] args) {
 		System.out.println(log2(8192));
 		int pageSize = 1024;
@@ -221,10 +244,10 @@ public class Chunk<T> {
 		int chunkSize = (1 << maxOrder) * pageSize;
 		System.out.println(chunkSize);
 
-		Chunk<DirectBuffer> chunk = new Chunk<DirectBuffer>(
-				new Arena<DirectBuffer>(), (DirectBuffer)ByteBuffer.allocateDirect(chunkSize) ,chunkSize, pageSize,maxOrder);
-		System.out.println(chunk.allocateRun(1024));
-		System.out.println("======" + chunk.usage());
+		//Chunk<DirectBuffer> chunk = new Chunk<DirectBuffer>(
+		//		new Arena<DirectBuffer>(), (DirectBuffer)ByteBuffer.allocateDirect(chunkSize) ,chunkSize, pageSize,maxOrder);
+		//System.out.println(chunk.allocateRun(1024));
+		//System.out.println("======" + chunk.usage());
 
 	}
 	

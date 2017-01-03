@@ -1,17 +1,234 @@
 package io.mycat.bigmem.buffer;
 
+import io.mycat.bigmem.util.MathUtil;
+
 /**
 ** @desc:
 ** @author: zhangwy   
 * @date: 2016年12月28日 上午6:48:19
 **/
-public class Arena<T> {
+public abstract class Arena<T> {
 	/**
 	 * 
+	 * 
 	 */
+	private final int tinySubpagePoolSize = 512 >>> 4;
+	private final int subpageOverflowMask ;
+	protected final int pageSize;
+	protected final int pageShift ; 
+	protected final int maxOrder;
+	protected final int chunkSize;
+	protected final int smallSubpagePoolSize; 
+	private final Subpage<T>[] tinySubpagePool ;
+	private final Subpage<T>[] smallSubpagePool;
 	
-	public Arena() {
+    private final ChunkList<T> q050;
+    private final ChunkList<T> q025;
+    private final ChunkList<T> q000;
+    private final ChunkList<T> qInit;
+    private final ChunkList<T> q075;
+    private final ChunkList<T> q100;
+    
+    
+	public Arena(int pageSize,int chunkSize,int maxOrder) {
+		this.chunkSize = chunkSize;
+		this.pageSize = pageSize;
+		this.maxOrder = maxOrder;
+		this.pageShift = MathUtil.log2p(pageSize);
+		this.subpageOverflowMask = ~(pageSize - 1);
+		tinySubpagePool = newSupagePoolHeader(tinySubpagePoolSize, pageSize);
+		smallSubpagePoolSize = this.pageShift - 9;
+		smallSubpagePool = newSupagePoolHeader(smallSubpagePoolSize, pageSize);
+		
+        q100 = new ChunkList<T>(this, null, 100, Integer.MAX_VALUE);
+        q075 = new ChunkList<T>(this, q100, 75, 100);
+        q050 = new ChunkList<T>(this, q075, 50, 100);
+        q025 = new ChunkList<T>(this, q050, 25, 75);
+        q000 = new ChunkList<T>(this, q025, 1, 50);
+        qInit = new ChunkList<T>(this, q000, Integer.MIN_VALUE, 25);
+        
+        q100.setPre(q075);
+        q075.setPre(q050);
+        q050.setPre(q025);
+        q025.setPre(q000);
+        q000.setPre(null);
+        qInit.setPre(qInit);
+        
+	}
+	public BaseByteBuffer<T> allocateBuffer(int capacity) {
+		BaseByteBuffer<T> buffer = newBuffer();
+		allocate(buffer, capacity);
+		return buffer;
+	}
+	
+	
+	/**
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午8:38:20
+	**/
+	private void allocate(BaseByteBuffer<T> buffer, int capacity) {
+		int normalSize = normalizeCapacity(capacity);
+		if(isTinyOrSmall(normalSize)) {
+			Subpage<T>[] table;
+			int tableId;
+			if(isTiny(normalSize)) {
+				table = tinySubpagePool;
+				tableId = tinyId(normalSize);
+			} else {
+				table = smallSubpagePool;
+				tableId = smallId(normalSize);
+			}
+			synchronized (this) {
+				final Subpage<T> head = table[tableId];
+				final Subpage<T> s = head.next;
+				if(s != head) {
+					long handle = s.allocate();
+					s.getChunk().initBuf(buffer, handle, normalSize);
+					return ;
+				}
+			}
+			allocateNormal(buffer, capacity, normalSize);
+			return ;
+		} else if(normalSize <= chunkSize){
+			//分配大于pageSize 小于chunkSize
+			allocateNormal(buffer, capacity, normalSize);
+			return ;
+		} else {
+			//分配huge
+			allocateHuge(buffer, capacity, normalSize);
+
+		}
+	}
+	
+	 /**
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午8:59:37
+	**/
+	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity, int normalSize) {
 		
 	}
+	
+	/**
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午8:58:50
+	**/
+	private synchronized void allocateNormal(BaseByteBuffer<T> buffer, int capacity, int normalSize) {
+		if (q050.allocate(buffer, capacity, normalSize) || q025.allocate(buffer, capacity, normalSize) ||
+	            q000.allocate(buffer, capacity, normalSize) || qInit.allocate(buffer, capacity, normalSize) ||
+	            q075.allocate(buffer, capacity, normalSize) || q100.allocate(buffer, capacity, normalSize)) {
+	            return;
+	        }
+
+        // Add a new chunk.
+       	Chunk<T> c = newChunk();
+        long handle = c.allocate(normalSize);
+        assert handle > 0;
+        c.initBuf(buffer, handle, capacity);
+        qInit.addChunk(c);
+	}
+	
+	int normalizeCapacity(int reqCapacity) {
+		if (reqCapacity < 0) {
+		    throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
+		}
+		if (reqCapacity >= chunkSize) {
+		    return reqCapacity;
+		}
+		
+		if (!isTiny(reqCapacity)) { // >= 512
+		    // Doubled
+		
+		    int normalizedCapacity = reqCapacity;
+		    normalizedCapacity --;
+		    normalizedCapacity |= normalizedCapacity >>>  1;
+		    normalizedCapacity |= normalizedCapacity >>>  2;
+		    normalizedCapacity |= normalizedCapacity >>>  4;
+		    normalizedCapacity |= normalizedCapacity >>>  8;
+		    normalizedCapacity |= normalizedCapacity >>> 16;
+		    normalizedCapacity ++;
+		
+		    if (normalizedCapacity < 0) {
+		        normalizedCapacity >>>= 1;
+		    }
+		
+		    return normalizedCapacity;
+		}
+		
+		// Quantum-spaced
+		if ((reqCapacity & 15) == 0) {
+		    return reqCapacity;
+		}
+		
+		return (reqCapacity & ~15) + 16;
+	}
+	/**
+	*@desc
+	*@auth zhangwy @date 2016年12月31日 上午9:52:21
+	**/
+	private Subpage<T>[] newSupagePoolHeader(int size,int pageSize) {
+		@SuppressWarnings("unchecked")
+		Subpage<T>[] list = new Subpage[size];
+		for(int i = 0 ; i < size; i++) {
+			list[i] = new Subpage<T>(pageSize);
+		}
+		return list;
+	}
+	/** < pageSize
+	**/
+	boolean isTinyOrSmall(int normalSize) {
+		return (normalSize & subpageOverflowMask) == 0;
+	}
+	/**
+	* < 512
+	**/
+	boolean isTiny(int normalSize) {
+		return (normalSize & 0xfffffE00) == 0;
+	}
+	/**
+	*@desc 返回tiny类型的tableId
+	*@auth zhangwy @date 2016年12月31日 上午8:09:30
+	**/
+	private int tinyId(int normalSize) {
+		return normalSize >>> 4;
+	}
+	/**
+	*@desc
+	*@auth zhangwy @date 2016年12月31日 上午8:11:17
+	**/
+	private int smallId(int normalSize) {
+		//Integer.SIZE - 1 - Integer.numberOfLeadingZeros(normCapacity) - 9
+		//=log2(normCapacity) - 9
+		return Integer.SIZE - Integer.numberOfLeadingZeros(normalSize) - 10;	
+	}
+	/**
+	*@desc:
+	*@return: void
+	*@auth: zhangwy @date: 2016年12月31日 上午8:06:57
+	**/
+	public Subpage<T> findSubpagePoolHead(int normalSize) {
+		Subpage<T>[] table;
+		int tableId;
+		if(isTiny(normalSize)) {
+			table = tinySubpagePool;
+			tableId = tinyId(normalSize);
+		} else {
+			table = smallSubpagePool;
+			tableId = smallId(normalSize);
+		}
+		return table[tableId];
+	}
+	/**创建一个新的chunk
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午6:21:04
+	**/
+	public abstract Chunk<T> newChunk();
+	/*
+	 * 创建一个新的bytegBuffer
+	 * **/
+	public abstract BaseByteBuffer<T> newBuffer();
+	
+	/*
+	 * 释放byteBuffer*/
+	public abstract void freeChunk(Chunk<T> chunk);	
 }
 

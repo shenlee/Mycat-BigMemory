@@ -6,8 +6,8 @@ package io.mycat.bigmem.buffer;
 **/
 public class ChunkList<T> {
 	private final Arena<T> arena;
-	private final ChunkList<T> preList;
-	private ChunkList<T> nextList;
+	private  ChunkList<T> preList;
+	private final ChunkList<T> nextList;
 	
 	private final int minUsage;
 	private final int maxUsage;
@@ -16,24 +16,24 @@ public class ChunkList<T> {
 	/**
 	 * 
 	 */
-	public ChunkList(Arena<T> arena, ChunkList<T> preList, int minUsage, int maxUsage) {
+	public ChunkList(Arena<T> arena, ChunkList<T> nextList, int minUsage, int maxUsage) {
 		this.arena = arena;
-		this.preList = preList;
+		this.nextList = nextList;
 		this.minUsage = minUsage;
 		this.maxUsage = maxUsage;
 	}
-	public void setNext(ChunkList<T> nextList) {
-		this.nextList = nextList;
+	public void setPre(ChunkList<T> nextList) {
+		this.preList = preList;
 	}
 	
-	public boolean allocate(BaseByteBuffer<T> byteBuffer ,int normalSize) {
+	public boolean allocate(BaseByteBuffer<T> byteBuffer ,int capacity, int normalSize) {
 		
 		if(head == null) return false;
 		Chunk<T> cur = head;
 		while(cur != null) {
 			long handle = cur.allocate(normalSize);
 			if(handle > 0) {
-				cur.initBuf(byteBuffer, handle, normalSize);
+				cur.initBuf(byteBuffer, handle, capacity);
 				if(cur.usage() >= maxUsage) {
 					remove(cur);
 					addChunk(cur);
@@ -49,7 +49,7 @@ public class ChunkList<T> {
 	*@return: void
 	*@auth: zhangwy @date: 2016年12月30日 上午7:39:20
 	**/
-	private void addChunk(Chunk<T> cur) {
+	public void addChunk(Chunk<T> cur) {
 		if(cur.usage() >= maxUsage) {
 			nextList.addChunk(cur);
 		}

@@ -24,12 +24,12 @@ public class testMemory {
 		System.out.println(4096 ^ 2048);
 
 		
-		PooledByteBufAllocator pool = new PooledByteBufAllocator();
-		ByteBuf buffer = pool.directBuffer(10, 4099);
-		ByteBuf buffer1 = pool.directBuffer(32, 9999);
+		//PooledByteBufAllocator pool = new PooledByteBufAllocator();
+	//	ByteBuf buffer = pool.directBuffer(10, 4099);
+	//	ByteBuf buffer1 = pool.directBuffer(32, 9999);
 	
-		System.out.println(buffer.alloc());
-		System.out.println(buffer1.alloc());
+	//	System.out.println(buffer.alloc());
+	//	System.out.println(buffer1.alloc());
 
 		System.out.println(1 << 11 - 4);
 		
