@@ -1,11 +1,14 @@
 package io.mycat.bigmem;
 
 import io.mycat.bigmem.buffer.Arena;
+import io.mycat.bigmem.buffer.BaseByteBuffer;
+import io.mycat.bigmem.buffer.DirectArena;
 import io.mycat.bigmem.buffer.DirectByteBuffer;
 import io.mycat.bigmem.util.UnsafeUtil;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -37,22 +40,25 @@ public class MemoryAllocator {
 	private static final int DEFAULT_PAGE_SIZE = 8192;
 
 	/**
-	 * defaultChunkSize = 16MB
-	 */
-	final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
-
-	/**
 	 * maxNumArenas占用的内存量不能超过系统总内存的50% maxNumArenas包括公共和独占的
 	 * 1个Arena内默认最小有3个Chunk:tiny, small and other
 	 */
-	private static final int MAX_NUM_ARENAS = (int) UnsafeUtil
-			.maxDirectMemory() / 2 / 3;
+	private static final int MAX_NUM_ARENAS;
 
 	private static final int DEFAULT_NUM_PUBLIC_ARENAS;
 
 	private static final int DEFAULT_NUM_PRIVATE_ARENAS;
 
 	static {
+		
+		/**
+		 * defaultChunkSize = 16MB
+		 */
+		final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
+		
+		MAX_NUM_ARENAS = (int) UnsafeUtil
+					.maxDirectMemory() / 2 / 3/ defaultChunkSize;
+		 
 		final Runtime runtime = Runtime.getRuntime();
 		/**
 		 * 公共Arena最小数量 https://github.com/netty/netty/issues/3888
@@ -75,7 +81,7 @@ public class MemoryAllocator {
 	public static final MemoryAllocator CURRENT = new MemoryAllocator();
 
 	private final Arena[] publicArenas;
-	private final List<Arena> privateArenas = new ArrayList<Arena>(DEFAULT_NUM_PRIVATE_ARENAS);
+	private final List<Arena> privateArenas = Collections.synchronizedList(new ArrayList<Arena>());
 	
 	private MemoryAllocator()
 	{
@@ -87,7 +93,7 @@ public class MemoryAllocator {
 		if (nPublicArena > 0) {
             publicArenas = new Arena[nPublicArena]; 
             for (int i = 0; i < publicArenas.length; i ++) {
-            	Arena arena = new Arena();
+            	Arena arena = new DirectArena(DEFAULT_PAGE_SIZE, (int)(DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER), DEFAULT_MAX_ORDER);
             	publicArenas[i] = arena; 
             }
         }else
@@ -100,18 +106,21 @@ public class MemoryAllocator {
 	 * 申请绑定一个Private Arena。适用于内存需求量大，希望独占Arena，但是所需capacity会动态变化的情况。 绑定后，
 	 * 此Arena不能分配其他内存分配请求，也不会与Thread绑定。
 	 * 
-	 * @param maxCapacity
-	 *            预期最大容量
+	 *
 	 * @return privateIdx， -1则表示绑定失败
 	 */
-	public int allocatePrivate(int maxCapacity) {
-		if(validateCapacity(maxCapacity))
+	public int allocatePrivate() {
+		int privateIdx = -1;
+		if(validateCapacity())
 		{
-			Arena arena = new Arena();
-			privateArenas.add(arena);
-			return 0;
+			Arena arena = new DirectArena(DEFAULT_PAGE_SIZE, (int)(DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER), DEFAULT_MAX_ORDER);;
+			if(privateArenas.add(arena))
+			{
+				privateIdx = privateArenas.indexOf(arena);
+				return privateIdx;
+			}
 		}
-		return -1;
+		return privateIdx;
 	}
 
 	/**
@@ -121,10 +130,14 @@ public class MemoryAllocator {
 	 * @return
 	 */
 	public void freePrivate(int privateIdx) {
+//		Arena arena = privateArenas.get(privateIdx);
+		
 	}
 
-	public DirectByteBuffer directBuffer(int capacity) {
-		return null;
+	public BaseByteBuffer directBuffer(int capacity) {
+		//暂时简单取余数
+		int remainder = (int)Thread.currentThread().getId() % publicArenas.length;
+		return publicArenas[remainder].allocateBuffer(capacity);
 	}
 
 	/**
@@ -134,14 +147,20 @@ public class MemoryAllocator {
 	 * @param capacity
 	 * @return
 	 */
-	public DirectByteBuffer directBuffer(int privateIdx, int capacity) {
-		return null;
+	public BaseByteBuffer directBuffer(int privateIdx, int capacity) {
+		return privateArenas.get(privateIdx).allocateBuffer(capacity);
 	}
 	
-	private boolean validateCapacity(int capacity)
+	private boolean validateCapacity()
 	{
-		return false;
+		return true;
 	}
 	//
 	// public void recycle(DirectByteBuffer theBuf) ;
+	
+	public static void main(String[] args) {
+		MemoryAllocator.CURRENT.directBuffer(10000);
+		int index = MemoryAllocator.CURRENT.allocatePrivate();
+		MemoryAllocator.CURRENT.directBuffer(index, 10000000);
+	}
 }
