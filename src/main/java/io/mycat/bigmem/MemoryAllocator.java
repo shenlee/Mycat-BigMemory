@@ -4,6 +4,7 @@ import io.mycat.bigmem.buffer.Arena;
 import io.mycat.bigmem.buffer.DirectByteBuffer;
 import io.mycat.bigmem.util.UnsafeUtil;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +20,7 @@ import org.slf4j.LoggerFactory;
 public class MemoryAllocator {
 
 	final static Logger LOGGER = LoggerFactory.getLogger(MemoryAllocator.class);
-
+	 ByteBuffer buffer;
 	/**
 	 * 暂不支持MAX_ORDER的设置， 默认为11
 	 */
