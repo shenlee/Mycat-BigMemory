@@ -18,9 +18,10 @@ public class Subpage<T> {
 	private int maxNum; /*最多可分配的个数*/
 	
 	/*作为头指针的初始化*/
-	public Subpage(int pageSize) {
+	public Subpage(int size, int pageSize) {
 		this.memoryMapIdx = -1;
 		this.chunk = null;
+		this.elememtSize = size;
 		this.pageSize = pageSize;
 		this.bitMap = null;
 		this.prev = this;
@@ -71,7 +72,7 @@ public class Subpage<T> {
 	/*分配一个elementSize的大小*/
 	public long allocate() {
 		if(elememtSize == 0 ) toHandle(0);
-		if(aviableNum > 0) return -1;
+		if(aviableNum <= 0) return -1;
 		long bitMapId = bitMap.findFree();
 		long handle = toHandle(bitMapId);
 		bitMap.set(bitMapId);

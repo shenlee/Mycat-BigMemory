@@ -54,6 +54,7 @@ public class ChunkList<T> {
 	public void addChunk(Chunk<T> cur) {
 		if(cur.usage() >= maxUsage) {
 			nextList.addChunk(cur);
+			return ;
 		}
 		cur.parent = this;
 		if(head == null) {
@@ -64,6 +65,7 @@ public class ChunkList<T> {
 			cur.next = head;
 			head.prev = cur;
 			cur.prev = null;
+			head = cur;
 		}
 	}
 	/**

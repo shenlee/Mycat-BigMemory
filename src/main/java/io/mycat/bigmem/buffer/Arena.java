@@ -128,7 +128,9 @@ public abstract class Arena<T> {
         c.initBuf(buffer, handle, capacity);
         qInit.addChunk(c);
 	}
-	
+	/**
+	 * 对于tinysize 变为16的倍数
+	 * 对于smallsize变为2的次方**/
 	int normalizeCapacity(int reqCapacity) {
 		if (reqCapacity < 0) {
 		    throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
@@ -136,10 +138,8 @@ public abstract class Arena<T> {
 		if (reqCapacity >= chunkSize) {
 		    return reqCapacity;
 		}
-		
 		if (!isTiny(reqCapacity)) { // >= 512
 		    // Doubled
-		
 		    int normalizedCapacity = reqCapacity;
 		    normalizedCapacity --;
 		    normalizedCapacity |= normalizedCapacity >>>  1;
@@ -152,15 +152,12 @@ public abstract class Arena<T> {
 		    if (normalizedCapacity < 0) {
 		        normalizedCapacity >>>= 1;
 		    }
-		
 		    return normalizedCapacity;
 		}
-		
 		// Quantum-spaced
 		if ((reqCapacity & 15) == 0) {
 		    return reqCapacity;
 		}
-		
 		return (reqCapacity & ~15) + 16;
 	}
 	/**
@@ -171,7 +168,7 @@ public abstract class Arena<T> {
 		@SuppressWarnings("unchecked")
 		Subpage<T>[] list = new Subpage[size];
 		for(int i = 0 ; i < size; i++) {
-			list[i] = new Subpage<T>(pageSize);
+			list[i] = new Subpage<T>(i << 4,pageSize);
 		}
 		return list;
 	}

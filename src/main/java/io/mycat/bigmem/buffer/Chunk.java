@@ -80,12 +80,12 @@ public class Chunk<T> {
 		}
 		Subpage<T> subpage = subpagesList[subpageId(memoryMapId)];
 		if(subpage == null) {
-			subpage = new Subpage(this, memoryMapId, pageSize, normalSize);
+			subpage = new Subpage<T>(this, memoryMapId, pageSize, normalSize);
 			subpagesList[subpageId(memoryMapId)] = subpage;
 		} else {
 			subpage.initSubpage(normalSize);
 		}
-		return memoryMapId;
+		return subpage.allocate();
 	}
 	/** 初始化byteBuffer
 	*@desc
@@ -222,17 +222,19 @@ public class Chunk<T> {
 	static int log2(int value) {
 		return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(value);
 	}
-	
+	/**
+	 * 已使用率.
+	 * **/
 	public int usage() {
-		int usePercent = 0;
+		int freePercent = 0;
 		if(freeBytes == 0) {
 			return 100;
 		}
-		usePercent = (chunkSize - freeBytes) * 100 / chunkSize;
-		if(usePercent == 0) {
+		freePercent =  freeBytes * 100 / chunkSize;
+		if(freePercent == 0) {
 			return 99;
 		}
-		return usePercent;
+		return 100 - freePercent;
 	}
 	public Arena<T> getArena() {
 		return this.arena;
