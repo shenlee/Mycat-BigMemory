@@ -4,8 +4,8 @@ import io.mycat.bigmem.util.ByteUtil;
 
 public abstract class BaseByteBuffer<T> {
 	protected long offset ;
-	protected long capacity ;
-	protected long maxCapacity;
+	protected int capacity ;
+	protected int maxCapacity;
 	protected long readerIndex;
 	protected long writerIndex;
 	protected T memory;
@@ -31,6 +31,14 @@ public abstract class BaseByteBuffer<T> {
 		this.capacity = capacity;
 		this.maxCapacity = maxCapacity;
 	};
+	public void free() {
+		this.chunk.getArena().free(chunk, this.handle, maxCapacity);
+		this.memory = null;
+		this.handle = -1;
+		this.offset = -1;
+		this.capacity = -1;
+		this.maxCapacity = -1;
+	}
 	public abstract byte getByte(long readerIndex);
 	public abstract short getShort(long readerIndex);
 	public abstract int getInt(long readerIndex);

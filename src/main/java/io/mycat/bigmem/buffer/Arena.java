@@ -37,9 +37,9 @@ public abstract class Arena<T> {
 		this.maxOrder = maxOrder;
 		this.pageShift = MathUtil.log2p(pageSize);
 		this.subpageOverflowMask = ~(pageSize - 1); /*用来判断是否小于一个pageSize的*/
-		tinySubpagePool = newSupagePoolHeader(tinySubpagePoolSize, pageSize);
+		tinySubpagePool = newSupagePoolHeader(tinySubpagePoolSize, pageSize , 4);
 		smallSubpagePoolSize = this.pageShift - 9;
-		smallSubpagePool = newSupagePoolHeader(smallSubpagePoolSize, pageSize);
+		smallSubpagePool = newSupagePoolHeader(smallSubpagePoolSize, pageSize, 9);
 		
         q100 = new ChunkList<T>(this, null, 100, Integer.MAX_VALUE);
         q075 = new ChunkList<T>(this, q100, 75, 100);
@@ -164,11 +164,11 @@ public abstract class Arena<T> {
 	*@desc
 	*@auth zhangwy @date 2016年12月31日 上午9:52:21
 	**/
-	private Subpage<T>[] newSupagePoolHeader(int size,int pageSize) {
+	private Subpage<T>[] newSupagePoolHeader(int size,int pageSize, int scale) {
 		@SuppressWarnings("unchecked")
 		Subpage<T>[] list = new Subpage[size];
 		for(int i = 0 ; i < size; i++) {
-			list[i] = new Subpage<T>(i << 4,pageSize);
+			list[i] = new Subpage<T>(i << scale,pageSize);
 		}
 		return list;
 	}
@@ -260,7 +260,7 @@ public abstract class Arena<T> {
         	appendPoolSubPages(buf, tinySubpagePool);
         buf.append(StringUtil.NEWLINE)
            .append("small subpages:");
-       // appendPoolSubPages(buf, smallSubpagePools);
+        appendPoolSubPages(buf, smallSubpagePool);
         buf.append(StringUtil.NEWLINE);
 
         return buf.toString();
@@ -272,12 +272,21 @@ public abstract class Arena<T> {
 	private void appendPoolSubPages(StringBuilder buf, Subpage<T>[] pool) {
 		for(int i = 0; i < pool.length; i++) {
 			Subpage<T> cur = pool[i];
-			buf.append("header elememtSize:" + (i << 4));
+			buf.append("header elememtSize:" + cur.getElememtSize() );
 			while(cur.next != pool[i]) {
 				cur = cur.next;
 				buf.append(cur).append("   ");
 			}
 			buf.append(StringUtil.NEWLINE);
+		}
+	}
+	/**
+	*@desc 释放一个handle的byteBuffer
+	*@auth zhangwy @date 2017年1月4日 下午11:48:33
+	**/
+	public void free(Chunk<T> chunk, long handle,int normalSize) {
+		if(!chunk.parent.free(chunk, handle)){
+			freeChunk(chunk);
 		}
 	}
 }

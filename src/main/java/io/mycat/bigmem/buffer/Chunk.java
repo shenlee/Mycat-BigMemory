@@ -178,13 +178,31 @@ public class Chunk<T> {
 			id = parentId;
 		}
 	}
-	private void free(int memoryMapId) {
-
+	private void freeNode(int memoryMapId) {
 		//需要释放subpage 代码为实现
-		
 		setValue(memoryMapId, depth[memoryMapId]);
 		freeBytes += runLength(memoryMapId);
 		updateParentfree(memoryMapId);
+	}
+	
+	/** 释放一个handle
+	 * 如果是subpage的，首先释放bitMapId， 假如整个subpage都已经被释放，则释放当前的MemoryId，同时增加freeBytes
+	*  如果是大于pageSize的，则直接释放当前的memoryId，同时增加freeBytes
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午9:17:28
+	**/
+	public void free(long handle) {
+		final int memoryMapIdx = (int) handle;
+		int bitmapIdx = (int) (handle >>> Integer.SIZE);
+		if (bitmapIdx != 0) {
+			Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
+			bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
+			if(subpage.free(bitmapIdx)) {
+				//正在使用直接返回
+				return;
+			}
+		}
+		freeNode(memoryMapIdx);
 	}
 	
 	private byte value(int memoryMapId) {
@@ -195,11 +213,12 @@ public class Chunk<T> {
 		memoryMap[memoryMapId] = value;
 	} 
 	
+	
 
 	/*    获取当前层数的偏移量然后 * 当前层数一个节点所管理的大小*/
 	private long runOffset(int memoryMapId) {
 		int nodeOffset = memoryMapId ^ (1 << depth[memoryMapId]);
-		System.out.println("nodeOffset " + nodeOffset);
+//		System.out.println("nodeOffset " + nodeOffset);
 		return  nodeOffset * runLength(memoryMapId);
 	}
 	

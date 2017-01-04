@@ -19,7 +19,7 @@ public class DirectByteBufferTest {
 		//Chunk<DirectBuffer> chunk = arena.newChunk();
 		//buffer.init(chunk , 0, 0,300, 300);
 		//buffer._putByte(0, (byte)9);
-		int size = 47;
+		int size = 26;
 		buffer = new BaseByteBuffer[size];
 		for(int i = 0 ; i < size ; i++) {
 			buffer[i] = arena.allocateBuffer(300);
@@ -27,17 +27,16 @@ public class DirectByteBufferTest {
 			
 			//System.out.println(buffer[i]._getByte(0));
 		}
-		System.out.println("=======================================");
 		for(int i = 0 ; i < size ; i++) {
-			System.out.println(buffer[i]._getByte(0));
+			buffer[i].free();
 		}
-		
-		buffer = new BaseByteBuffer[size];
+		System.out.println(arena.toString());
+
+		size = size ;
+		buffer = new BaseByteBuffer[size ];
 		for(int i = 0 ; i < size ; i++) {
-			buffer[i] = arena.allocateBuffer(16777216);
+			buffer[i] = arena.allocateBuffer(1024);
 			buffer[i]._putByte(0, (byte)(i + 1));
-			
-			//System.out.println(buffer[i]._getByte(0));
 		}
 		System.out.println("=======================================");
 		for(int i = 0 ; i < size ; i++) {
@@ -45,6 +44,12 @@ public class DirectByteBufferTest {
 		}
 		//System.out.println(buffer._getByte(0));
 		System.out.println(arena.toString());
+		
+		for(int i = 0 ; i < size ; i++) {
+			buffer[i].free();
+		}
+		System.out.println(arena.toString());
+
 	}
 }
 

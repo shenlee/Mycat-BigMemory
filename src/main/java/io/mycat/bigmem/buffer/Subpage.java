@@ -83,7 +83,7 @@ public class Subpage<T> {
 		}
 		return handle;
 	}
-	/*返回当前的chunk正在使用,
+	/*返回当前的chunk是否正在使用,
 	 * true: 正在使用,
 	 * flase: 不在使用了,可以回收了*/
 	public boolean free(long bitMapId) {
