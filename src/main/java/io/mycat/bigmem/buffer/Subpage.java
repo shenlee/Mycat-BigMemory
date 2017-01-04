@@ -21,7 +21,7 @@ public class Subpage<T> {
 	public Subpage(int pageSize) {
 		this.memoryMapIdx = -1;
 		this.chunk = null;
-		this.elememtSize = pageSize;
+		this.pageSize = pageSize;
 		this.bitMap = null;
 		this.prev = this;
 		this.next = this;
@@ -123,6 +123,13 @@ public class Subpage<T> {
 	public int getElememtSize() {
 		return elememtSize;
 	}
+	
+	@Override
+    public String toString() {
+        return String.valueOf('(') + memoryMapIdx + ": " + (maxNum - aviableNum) + '/' + maxNum +
+               ", offset: " + runOffset + ", length: " + pageSize + ", elememtSize: " + elememtSize + ')';
+    }
+	
     public static void main(String[] args) {
 
     	System.out.println(Integer.toBinaryString(0xffffffff));

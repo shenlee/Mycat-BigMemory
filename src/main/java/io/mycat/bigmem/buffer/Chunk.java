@@ -237,6 +237,23 @@ public class Chunk<T> {
 	public Arena<T> getArena() {
 		return this.arena;
 	}
+	
+	
+	 @Override
+	public String toString() {
+	    return new StringBuilder()
+	    .append("Chunk(")
+	    .append(Integer.toHexString(System.identityHashCode(this)))
+	    .append(": ")
+	    .append(usage())
+	    .append("%, ")
+	    .append(chunkSize - freeBytes)
+	    .append('/')
+	    .append(chunkSize)
+	    .append(')')
+	     .toString();
+	}
+	
 	public static void main(String[] args) {
 		System.out.println(log2(8192));
 		int pageSize = 1024;

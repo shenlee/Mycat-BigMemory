@@ -1,5 +1,7 @@
 package io.mycat.bigmem.buffer;
 
+import io.mycat.bigmem.util.StringUtil;
+
 /**
 *@desc
 *@author: zhangwy   @date: 2016年12月28日 上午6:50:37
@@ -83,6 +85,21 @@ public class ChunkList<T> {
 				next.prev = cur.prev;
 			}
 		}
+	}
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder("");
+		Chunk<T> next = head;
+		while(next != null) {
+			sb.append(next);
+			sb.append(StringUtil.NEWLINE);
+			next = next.next;
+		}
+		
+		return sb.toString();
 	}
 }
 

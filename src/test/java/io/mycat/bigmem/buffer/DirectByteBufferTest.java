@@ -22,6 +22,8 @@ public class DirectByteBufferTest {
 		buffer = arena.allocateBuffer(300);
 		buffer._putByte(0, (byte)9);
 		System.out.println(buffer._getByte(0));
+		
+		System.out.println(arena.toString());
 	}
 }
 

@@ -1,6 +1,7 @@
 package io.mycat.bigmem.buffer;
 
 import io.mycat.bigmem.util.MathUtil;
+import io.mycat.bigmem.util.StringUtil;
 
 /**
 ** @desc:
@@ -35,7 +36,7 @@ public abstract class Arena<T> {
 		this.pageSize = pageSize;
 		this.maxOrder = maxOrder;
 		this.pageShift = MathUtil.log2p(pageSize);
-		this.subpageOverflowMask = ~(pageSize - 1);
+		this.subpageOverflowMask = ~(pageSize - 1); /*用来判断是否小于一个pageSize的*/
 		tinySubpagePool = newSupagePoolHeader(tinySubpagePoolSize, pageSize);
 		smallSubpagePoolSize = this.pageShift - 9;
 		smallSubpagePool = newSupagePoolHeader(smallSubpagePoolSize, pageSize);
@@ -55,6 +56,7 @@ public abstract class Arena<T> {
         qInit.setPre(qInit);
         
 	}
+	/*分配byteBuffer用的*/
 	public BaseByteBuffer<T> allocateBuffer(int capacity) {
 		BaseByteBuffer<T> buffer = newBuffer();
 		allocate(buffer, capacity);
@@ -230,5 +232,56 @@ public abstract class Arena<T> {
 	/*
 	 * 释放byteBuffer*/
 	public abstract void freeChunk(Chunk<T> chunk);	
+	@Override
+    public synchronized String toString() {
+        StringBuilder buf = new StringBuilder()
+            .append("Chunk(s) at 0~25%:")
+            .append(StringUtil.NEWLINE)
+            .append(qInit)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 0~50%:")
+            .append(StringUtil.NEWLINE)
+            .append(q000)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 25~75%:")
+            .append(StringUtil.NEWLINE)
+            .append(q025)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 50~100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q050)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 75~100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q075)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q100)
+            .append(StringUtil.NEWLINE)
+            .append("tiny subpages:");
+        	appendPoolSubPages(buf, tinySubpagePool);
+        buf.append(StringUtil.NEWLINE)
+           .append("small subpages:");
+       // appendPoolSubPages(buf, smallSubpagePools);
+        buf.append(StringUtil.NEWLINE);
+
+        return buf.toString();
+    }
+	/**
+	*@desc
+	*@auth zhangwy @date 2017年1月4日 上午7:51:48
+	**/
+	private void appendPoolSubPages(StringBuilder buf, Subpage<T>[] pool) {
+		for(int i = 0; i < pool.length; i++) {
+			Subpage<T> cur = pool[i];
+			buf.append("header elememtSize:" + (i << 4));
+			while(cur.next != pool[i]) {
+				cur = cur.next;
+				buf.append(cur).append("   ");
+			}
+			buf.append(StringUtil.NEWLINE);
+		}
+	}
 }
 
