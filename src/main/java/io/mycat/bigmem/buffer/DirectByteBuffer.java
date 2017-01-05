@@ -32,6 +32,14 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		super.init(chunk, handle, offset,capacity, maxCapacity);
 		initMemoryAddress() ;
 	}
+	/* 
+	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#initUnpooled(io.mycat.bigmem.buffer.Chunk, int)
+	 */
+	@Override
+	public void initUnpooled(Chunk<DirectBuffer> chunk, int capacity) {
+		super.initUnpooled(chunk, capacity);
+		initMemoryAddress();
+	}
 	
 	/**
 	*@desc
@@ -52,7 +60,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		}
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#getByte(long)
 	 */
 	@Override
@@ -62,7 +70,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 
 	
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#getShort(long)
 	 */
 	@Override
@@ -72,7 +80,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		return 0;
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#getInt(long)
 	 */
 	@Override
@@ -84,7 +92,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#getLong(long)
 	 */
 	@Override
@@ -125,10 +133,10 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 	 */
 	@Override
 	public void putByte(long readerIndex, byte value) {
-		 _putByte(readerIndex, value);;
+		 _putByte(readerIndex, value);
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#putShort(long, short)
 	 */
 	@Override
@@ -136,7 +144,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#putInt(long, int)
 	 */
 	@Override
@@ -144,7 +152,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#putLong(long, long)
 	 */
 	@Override
@@ -152,7 +160,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#putfloat(long, float)
 	 */
 	@Override
@@ -161,7 +169,7 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 		
 	}
 
-	/* (non-Javadoc)
+	/* 
 	 * @see io.mycat.bigmem.buffer.BaseByteBuffer#putdouble(long, double)
 	 */
 	@Override
@@ -170,9 +178,9 @@ public class DirectByteBuffer extends BaseByteBuffer<DirectBuffer>{
 	}
 	@Override
 	protected  long addr(long readerIndex) {
-	    	if(readerIndex > writerIndex) {
-	    		throw new IndexOutOfBoundsException("readerIndex can't max smaller writeIndex");
-	    	}
+	    	//if(readerIndex > writerIndex) {
+	    	//	throw new IndexOutOfBoundsException("readerIndex can't max smaller writeIndex");
+	    	//}
 	    	return memoryAddress + readerIndex;
 	    }
 	

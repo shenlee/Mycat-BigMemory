@@ -5,6 +5,7 @@ package io.mycat.bigmem.buffer;
 *@author: zhangwy   @date: 2016年12月28日 上午6:51:16
 **/
 public class Chunk<T> {
+	private final boolean pooled; /*是否进入缓存池*/
 	private final Arena<T> arena;
 	private final int pageSize;
 	private final int maxOrder;
@@ -31,6 +32,7 @@ public class Chunk<T> {
 	
 	public Chunk(Arena<T> arena,T memory, int chunkSize, int pageSize,
 			int maxOrder) {
+		pooled = true;
 		this.arena = arena;
 		this.memory = memory;
 		this.pageSize = pageSize;
@@ -55,6 +57,34 @@ public class Chunk<T> {
 		}
 		freeBytes = chunkSize;
 	}
+	
+	public Chunk(Arena<T> arena,T memory, int chunkSize) {
+		pooled = false;
+		this.arena = arena;
+		this.memory = memory;
+		this.pageSize = 0;
+		this.maxOrder = 0;
+		this.pageShift = 0;
+		this.log2ChunkSize = log2(chunkSize);
+		this.chunkSize = chunkSize;
+		this.unusable = (byte) (maxOrder + 1);
+		this.maxSubpageAllocs = (1 << maxOrder);
+		this.maskSubpage = ~(pageSize -1);
+		subpagesList = null;
+		memoryMap = null;
+		depth = null;
+		freeBytes = chunkSize;
+	}
+	/**
+	*@desc 返回是否进入缓存池
+	*@auth zhangwy @date 2017年1月5日 上午7:42:21
+	**/
+	public boolean getPooled() {
+		return this.pooled;
+	}
+	/**
+	 * 获取存储的容器
+	 * **/
 	public T getMemory() {
 		return memory;
 	}

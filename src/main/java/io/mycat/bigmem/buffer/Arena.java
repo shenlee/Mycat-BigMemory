@@ -97,18 +97,20 @@ public abstract class Arena<T> {
 			return ;
 		} else {
 			//分配huge
-			allocateHuge(buffer, capacity, normalSize);
+			allocateHuge(buffer, capacity);
 
 		}
 	}
 	
 	 /**
-	*@desc
+	*@desc 创建一个hugeChunk 不进入缓存池,并却初始化baseByteBuffer
 	*@auth zhangwy @date 2017年1月2日 下午8:59:37
 	**/
-	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity, int normalSize) {
-		
+	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity) {
+		Chunk<T> hugeChunk = newUnpoolChunk(capacity);
+		buffer.initUnpooled(hugeChunk, capacity);
 	}
+	
 	
 	/**
 	*@desc
@@ -221,6 +223,11 @@ public abstract class Arena<T> {
 	*@auth zhangwy @date 2017年1月2日 下午6:21:04
 	**/
 	public abstract Chunk<T> newChunk();
+	/**
+	*@desc
+	*@auth zhangwy @date 2017年1月5日 上午7:34:56
+	**/
+	public abstract Chunk<T> newUnpoolChunk(int capacity) ;
 	/*
 	 * 创建一个新的bytegBuffer
 	 * **/
@@ -229,6 +236,7 @@ public abstract class Arena<T> {
 	/*
 	 * 释放byteBuffer*/
 	public abstract void freeChunk(Chunk<T> chunk);	
+	
 	@Override
     public synchronized String toString() {
         StringBuilder buf = new StringBuilder()
@@ -285,8 +293,15 @@ public abstract class Arena<T> {
 	*@auth zhangwy @date 2017年1月4日 下午11:48:33
 	**/
 	public void free(Chunk<T> chunk, long handle,int normalSize) {
-		if(!chunk.parent.free(chunk, handle)){
-			freeChunk(chunk);
+		/*暂时先全部锁定...后面需要修改.*/
+		synchronized (this) {
+			if(!chunk.getPooled()) {
+				freeChunk(chunk);
+			} else {
+				if(!chunk.parent.free(chunk, handle)){
+					freeChunk(chunk);
+				}
+			}
 		}
 	}
 }

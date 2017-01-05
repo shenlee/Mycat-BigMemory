@@ -23,6 +23,10 @@ public abstract class BaseByteBuffer<T> {
 	public long writerIndex() {
 		return writerIndex;
 	}
+	/**
+	 * 初始化缓存池的buffer
+	 * @author zhangwy 
+	 * **/
 	public void init(Chunk<T> chunk,long handle, long offset,int capacity, int maxCapacity) {
 		this.chunk = chunk;
 		this.memory = chunk.getMemory();
@@ -31,6 +35,19 @@ public abstract class BaseByteBuffer<T> {
 		this.capacity = capacity;
 		this.maxCapacity = maxCapacity;
 	};
+	/**
+	 * 初始化不缓存的buffer
+	 * @author zhangwy 
+	 * **/
+	public void initUnpooled(Chunk<T> chunk, int capacity) {
+		this.chunk = chunk;
+		this.memory = chunk.getMemory();
+		this.capacity = capacity;
+		this.maxCapacity = capacity;
+		this.offset = 0;
+		this.handle = 0;
+	}
+	
 	public void free() {
 		this.chunk.getArena().free(chunk, this.handle, maxCapacity);
 		this.memory = null;
