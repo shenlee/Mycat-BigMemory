@@ -55,11 +55,12 @@ public class DirectByteBufferTest {
 	public void testHugeChunk() {
 		BaseByteBuffer<DirectBuffer> buffer = null;
 		Arena<DirectBuffer> arena = new DirectArena(8192,16 * 1024 * 1024 , 11);
-		buffer = arena.allocateBuffer(16 * 1024 * 1024 * 2);
+		buffer = arena.allocateBuffer(16 * 1024 * 1024 * 25);
 		for(int i = 0 ; i < buffer.capacity; i++) {
-			buffer.putByte(i, (byte)255);
+			buffer.putByte(i, (byte)(i % 255));
 		}
 		System.out.println(buffer.getByte(buffer.capacity - 1));
+		buffer.free();
 	}
 }
 

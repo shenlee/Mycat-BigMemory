@@ -73,7 +73,7 @@ public class Chunk<T> {
 		subpagesList = null;
 		memoryMap = null;
 		depth = null;
-		freeBytes = chunkSize;
+		freeBytes = 0;
 	}
 	/**
 	*@desc 返回是否进入缓存池
