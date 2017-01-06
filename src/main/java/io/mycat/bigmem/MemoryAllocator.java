@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MemoryAllocator {
 
-	final static Logger LOGGER = LoggerFactory.getLogger(MemoryAllocator.class);
+	private final static Logger LOGGER = LoggerFactory.getLogger(MemoryAllocator.class);
 	 ByteBuffer buffer;
 	/**
 	 * 暂不支持MAX_ORDER的设置， 默认为11
