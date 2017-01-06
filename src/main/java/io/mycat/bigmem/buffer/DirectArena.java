@@ -43,5 +43,14 @@ public class DirectArena extends Arena<ByteBuffer>{
 		Chunk<ByteBuffer> chunk = new Chunk<ByteBuffer>(this, ByteBuffer.allocateDirect(capacity), capacity);
 		return chunk;
 	}
+
+	/*创建一个不缓存的chunk 
+	 * @see io.mycat.bigmem.buffer.Arena#newUnpoolChunk(int)
+	 */
+	@Override
+	public Chunk<DirectBuffer> newUnpoolChunk(int capacity) {
+		Chunk<DirectBuffer> chunk = new Chunk<DirectBuffer>(this, (DirectBuffer) ByteBuffer.allocateDirect(capacity), capacity);
+		return chunk;
+	}
 }
 
