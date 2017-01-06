@@ -127,7 +127,7 @@ public abstract class Arena<T> {
        	Chunk<T> c = newChunk();
         long handle = c.allocate(normalSize);
         assert handle > 0;
-        c.initBuf(buffer, handle, capacity);
+        c.initBuf(buffer, handle, normalSize);
         qInit.addChunk(c);
 	}
 	/**
