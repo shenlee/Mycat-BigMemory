@@ -5,6 +5,7 @@ package io.mycat.bigmem.buffer;
 *@author: zhangwy   @date: 2016年12月28日 上午6:51:16
 **/
 public class Chunk<T> {
+	private final boolean pooled; /*是否进入缓存池*/
 	private final Arena<T> arena;
 	private final int pageSize;
 	private final int maxOrder;
@@ -31,6 +32,7 @@ public class Chunk<T> {
 	
 	public Chunk(Arena<T> arena,T memory, int chunkSize, int pageSize,
 			int maxOrder) {
+		pooled = true;
 		this.arena = arena;
 		this.memory = memory;
 		this.pageSize = pageSize;
@@ -55,6 +57,34 @@ public class Chunk<T> {
 		}
 		freeBytes = chunkSize;
 	}
+	
+	public Chunk(Arena<T> arena,T memory, int chunkSize) {
+		pooled = false;
+		this.arena = arena;
+		this.memory = memory;
+		this.pageSize = 0;
+		this.maxOrder = 0;
+		this.pageShift = 0;
+		this.log2ChunkSize = log2(chunkSize);
+		this.chunkSize = chunkSize;
+		this.unusable = (byte) (maxOrder + 1);
+		this.maxSubpageAllocs = (1 << maxOrder);
+		this.maskSubpage = ~(pageSize -1);
+		subpagesList = null;
+		memoryMap = null;
+		depth = null;
+		freeBytes = 0;
+	}
+	/**
+	*@desc 返回是否进入缓存池
+	*@auth zhangwy @date 2017年1月5日 上午7:42:21
+	**/
+	public boolean getPooled() {
+		return this.pooled;
+	}
+	/**
+	 * 获取存储的容器
+	 * **/
 	public T getMemory() {
 		return memory;
 	}
@@ -80,12 +110,12 @@ public class Chunk<T> {
 		}
 		Subpage<T> subpage = subpagesList[subpageId(memoryMapId)];
 		if(subpage == null) {
-			subpage = new Subpage(this, memoryMapId, pageSize, normalSize);
+			subpage = new Subpage<T>(this, memoryMapId, pageSize, normalSize);
 			subpagesList[subpageId(memoryMapId)] = subpage;
 		} else {
 			subpage.initSubpage(normalSize);
 		}
-		return memoryMapId;
+		return subpage.allocate();
 	}
 	/** 初始化byteBuffer
 	*@desc
@@ -97,7 +127,8 @@ public class Chunk<T> {
 	        if (bitmapIdx == 0) {
 	            byte val = value(memoryMapIdx);
 	            assert val == unusable : String.valueOf(val);
-	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
+//	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
+	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity);
 	        } else {
 	            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
 	        } 
@@ -110,8 +141,10 @@ public class Chunk<T> {
 		bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
         int memoryMapIdx = (int) handle;
 		Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
+//		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
+//				capacity, subpage.getElememtSize());
 		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
-				capacity, subpage.getElememtSize());
+				capacity);
 	}
 	/**
 	*@desc:
@@ -178,13 +211,31 @@ public class Chunk<T> {
 			id = parentId;
 		}
 	}
-	private void free(int memoryMapId) {
-
+	private void freeNode(int memoryMapId) {
 		//需要释放subpage 代码为实现
-		
 		setValue(memoryMapId, depth[memoryMapId]);
 		freeBytes += runLength(memoryMapId);
 		updateParentfree(memoryMapId);
+	}
+	
+	/** 释放一个handle
+	 * 如果是subpage的，首先释放bitMapId， 假如整个subpage都已经被释放，则释放当前的MemoryId，同时增加freeBytes
+	*  如果是大于pageSize的，则直接释放当前的memoryId，同时增加freeBytes
+	*@desc
+	*@auth zhangwy @date 2017年1月2日 下午9:17:28
+	**/
+	public void free(long handle) {
+		final int memoryMapIdx = (int) handle;
+		int bitmapIdx = (int) (handle >>> Integer.SIZE);
+		if (bitmapIdx != 0) {
+			Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
+			bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
+			if(subpage.free(bitmapIdx)) {
+				//正在使用直接返回
+				return;
+			}
+		}
+		freeNode(memoryMapIdx);
 	}
 	
 	private byte value(int memoryMapId) {
@@ -195,11 +246,12 @@ public class Chunk<T> {
 		memoryMap[memoryMapId] = value;
 	} 
 	
+	
 
 	/*    获取当前层数的偏移量然后 * 当前层数一个节点所管理的大小*/
-	private long runOffset(int memoryMapId) {
+	private int runOffset(int memoryMapId) {
 		int nodeOffset = memoryMapId ^ (1 << depth[memoryMapId]);
-		System.out.println("nodeOffset " + nodeOffset);
+//		System.out.println("nodeOffset " + nodeOffset);
 		return  nodeOffset * runLength(memoryMapId);
 	}
 	
@@ -222,21 +274,40 @@ public class Chunk<T> {
 	static int log2(int value) {
 		return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(value);
 	}
-	
+	/**
+	 * 已使用率.
+	 * **/
 	public int usage() {
-		int usePercent = 0;
+		int freePercent = 0;
 		if(freeBytes == 0) {
 			return 100;
 		}
-		usePercent = (chunkSize - freeBytes) * 100 / chunkSize;
-		if(usePercent == 0) {
+		freePercent =  freeBytes * 100 / chunkSize;
+		if(freePercent == 0) {
 			return 99;
 		}
-		return usePercent;
+		return 100 - freePercent;
 	}
 	public Arena<T> getArena() {
 		return this.arena;
 	}
+	
+	
+	 @Override
+	public String toString() {
+	    return new StringBuilder()
+	    .append("Chunk(")
+	    .append(Integer.toHexString(System.identityHashCode(this)))
+	    .append(": ")
+	    .append(usage())
+	    .append("%, ")
+	    .append(chunkSize - freeBytes)
+	    .append('/')
+	    .append(chunkSize)
+	    .append(')')
+	     .toString();
+	}
+	
 	public static void main(String[] args) {
 		System.out.println(log2(8192));
 		int pageSize = 1024;

@@ -18,10 +18,11 @@ public class Subpage<T> {
 	private int maxNum; /*最多可分配的个数*/
 	
 	/*作为头指针的初始化*/
-	public Subpage(int pageSize) {
+	public Subpage(int size, int pageSize) {
 		this.memoryMapIdx = -1;
 		this.chunk = null;
-		this.elememtSize = pageSize;
+		this.elememtSize = size;
+		this.pageSize = pageSize;
 		this.bitMap = null;
 		this.prev = this;
 		this.next = this;
@@ -71,7 +72,7 @@ public class Subpage<T> {
 	/*分配一个elementSize的大小*/
 	public long allocate() {
 		if(elememtSize == 0 ) toHandle(0);
-		if(aviableNum > 0) return -1;
+		if(aviableNum <= 0) return -1;
 		long bitMapId = bitMap.findFree();
 		long handle = toHandle(bitMapId);
 		bitMap.set(bitMapId);
@@ -82,7 +83,7 @@ public class Subpage<T> {
 		}
 		return handle;
 	}
-	/*返回当前的chunk正在使用,
+	/*返回当前的chunk是否正在使用,
 	 * true: 正在使用,
 	 * flase: 不在使用了,可以回收了*/
 	public boolean free(long bitMapId) {
@@ -123,6 +124,13 @@ public class Subpage<T> {
 	public int getElememtSize() {
 		return elememtSize;
 	}
+	
+	@Override
+    public String toString() {
+        return String.valueOf('(') + memoryMapIdx + ": " + (maxNum - aviableNum) + '/' + maxNum +
+               ", offset: " + runOffset + ", length: " + pageSize + ", elememtSize: " + elememtSize + ')';
+    }
+	
     public static void main(String[] args) {
 
     	System.out.println(Integer.toBinaryString(0xffffffff));

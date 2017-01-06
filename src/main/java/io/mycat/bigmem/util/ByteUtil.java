@@ -1,5 +1,6 @@
 package io.mycat.bigmem.util;
 
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import sun.misc.Unsafe;
@@ -18,6 +19,10 @@ public class ByteUtil {
     
     public static byte getByte(long address) {
         return UNSAFE.getByte(address);
+    }
+    
+    public static char makeChar(byte b1, byte b0) {
+        return (char)((b1 << 8) | (b0 & 0xff));
     }
     
     public static short getShort(long address) {

@@ -1,6 +1,7 @@
 package io.mycat.bigmem.buffer;
 
 import io.mycat.bigmem.util.MathUtil;
+import io.mycat.bigmem.util.StringUtil;
 
 /**
 ** @desc:
@@ -35,10 +36,10 @@ public abstract class Arena<T> {
 		this.pageSize = pageSize;
 		this.maxOrder = maxOrder;
 		this.pageShift = MathUtil.log2p(pageSize);
-		this.subpageOverflowMask = ~(pageSize - 1);
-		tinySubpagePool = newSupagePoolHeader(tinySubpagePoolSize, pageSize);
+		this.subpageOverflowMask = ~(pageSize - 1); /*用来判断是否小于一个pageSize的*/
+		tinySubpagePool = newSupagePoolHeader(tinySubpagePoolSize, pageSize , 4);
 		smallSubpagePoolSize = this.pageShift - 9;
-		smallSubpagePool = newSupagePoolHeader(smallSubpagePoolSize, pageSize);
+		smallSubpagePool = newSupagePoolHeader(smallSubpagePoolSize, pageSize, 9);
 		
         q100 = new ChunkList<T>(this, null, 100, Integer.MAX_VALUE);
         q075 = new ChunkList<T>(this, q100, 75, 100);
@@ -55,8 +56,9 @@ public abstract class Arena<T> {
         qInit.setPre(qInit);
         
 	}
+	/*分配byteBuffer用的*/
 	public BaseByteBuffer<T> allocateBuffer(int capacity) {
-		BaseByteBuffer<T> buffer = newBuffer();
+		BaseByteBuffer<T> buffer = newBuffer(capacity);
 		allocate(buffer, capacity);
 		return buffer;
 	}
@@ -95,18 +97,20 @@ public abstract class Arena<T> {
 			return ;
 		} else {
 			//分配huge
-			allocateHuge(buffer, capacity, normalSize);
+			allocateHuge(buffer, capacity);
 
 		}
 	}
 	
 	 /**
-	*@desc
+	*@desc 创建一个hugeChunk 不进入缓存池,并却初始化baseByteBuffer
 	*@auth zhangwy @date 2017年1月2日 下午8:59:37
 	**/
-	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity, int normalSize) {
-		
+	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity) {
+		Chunk<T> hugeChunk = newUnpoolChunk(capacity);
+		buffer.initUnpooled(hugeChunk, capacity);
 	}
+	
 	
 	/**
 	*@desc
@@ -126,7 +130,9 @@ public abstract class Arena<T> {
         c.initBuf(buffer, handle, capacity);
         qInit.addChunk(c);
 	}
-	
+	/**
+	 * 对于tinysize 变为16的倍数
+	 * 对于smallsize变为2的次方**/
 	int normalizeCapacity(int reqCapacity) {
 		if (reqCapacity < 0) {
 		    throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
@@ -134,10 +140,8 @@ public abstract class Arena<T> {
 		if (reqCapacity >= chunkSize) {
 		    return reqCapacity;
 		}
-		
 		if (!isTiny(reqCapacity)) { // >= 512
 		    // Doubled
-		
 		    int normalizedCapacity = reqCapacity;
 		    normalizedCapacity --;
 		    normalizedCapacity |= normalizedCapacity >>>  1;
@@ -150,26 +154,23 @@ public abstract class Arena<T> {
 		    if (normalizedCapacity < 0) {
 		        normalizedCapacity >>>= 1;
 		    }
-		
 		    return normalizedCapacity;
 		}
-		
 		// Quantum-spaced
 		if ((reqCapacity & 15) == 0) {
 		    return reqCapacity;
 		}
-		
 		return (reqCapacity & ~15) + 16;
 	}
 	/**
 	*@desc
 	*@auth zhangwy @date 2016年12月31日 上午9:52:21
 	**/
-	private Subpage<T>[] newSupagePoolHeader(int size,int pageSize) {
+	private Subpage<T>[] newSupagePoolHeader(int size,int pageSize, int scale) {
 		@SuppressWarnings("unchecked")
 		Subpage<T>[] list = new Subpage[size];
 		for(int i = 0 ; i < size; i++) {
-			list[i] = new Subpage<T>(pageSize);
+			list[i] = new Subpage<T>(i << scale,pageSize);
 		}
 		return list;
 	}
@@ -222,13 +223,86 @@ public abstract class Arena<T> {
 	*@auth zhangwy @date 2017年1月2日 下午6:21:04
 	**/
 	public abstract Chunk<T> newChunk();
+	/**
+	*@desc
+	*@auth zhangwy @date 2017年1月5日 上午7:34:56
+	**/
+	public abstract Chunk<T> newUnpoolChunk(int capacity) ;
 	/*
 	 * 创建一个新的bytegBuffer
 	 * **/
-	public abstract BaseByteBuffer<T> newBuffer();
+	public abstract BaseByteBuffer<T> newBuffer(int capacity);
 	
 	/*
 	 * 释放byteBuffer*/
 	public abstract void freeChunk(Chunk<T> chunk);	
+	
+	@Override
+    public synchronized String toString() {
+        StringBuilder buf = new StringBuilder()
+            .append("Chunk(s) at 0~25%:")
+            .append(StringUtil.NEWLINE)
+            .append(qInit)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 0~50%:")
+            .append(StringUtil.NEWLINE)
+            .append(q000)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 25~75%:")
+            .append(StringUtil.NEWLINE)
+            .append(q025)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 50~100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q050)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 75~100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q075)
+            .append(StringUtil.NEWLINE)
+            .append("Chunk(s) at 100%:")
+            .append(StringUtil.NEWLINE)
+            .append(q100)
+            .append(StringUtil.NEWLINE)
+            .append("tiny subpages:");
+        	appendPoolSubPages(buf, tinySubpagePool);
+        buf.append(StringUtil.NEWLINE)
+           .append("small subpages:");
+        appendPoolSubPages(buf, smallSubpagePool);
+        buf.append(StringUtil.NEWLINE);
+
+        return buf.toString();
+    }
+	/**
+	*@desc
+	*@auth zhangwy @date 2017年1月4日 上午7:51:48
+	**/
+	private void appendPoolSubPages(StringBuilder buf, Subpage<T>[] pool) {
+		for(int i = 0; i < pool.length; i++) {
+			Subpage<T> cur = pool[i];
+			buf.append("header elememtSize:" + cur.getElememtSize() );
+			while(cur.next != pool[i]) {
+				cur = cur.next;
+				buf.append(cur).append("   ");
+			}
+			buf.append(StringUtil.NEWLINE);
+		}
+	}
+	/**
+	*@desc 释放一个handle的byteBuffer
+	*@auth zhangwy @date 2017年1月4日 下午11:48:33
+	**/
+	public void free(Chunk<T> chunk, long handle,int normalSize) {
+		/*暂时先全部锁定...后面需要修改.*/
+		synchronized (this) {
+			if(!chunk.getPooled()) {
+				freeChunk(chunk);
+			} else {
+				if(!chunk.parent.free(chunk, handle)){
+					freeChunk(chunk);
+				}
+			}
+		}
+	}
 }
 
