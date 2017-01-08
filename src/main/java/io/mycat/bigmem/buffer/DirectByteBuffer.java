@@ -43,15 +43,15 @@ public class DirectByteBuffer extends BaseByteBuffer<ByteBuffer> {
 	}
 
 	@Override
-	public DirectByteBuffer init(Chunk<ByteBuffer> chunk, long handle, int offset, int length) {
-		super.init(chunk, handle, offset, length);
+	public DirectByteBuffer init(Chunk<ByteBuffer> chunk, long handle, int offset, int length, int maxLength) {
+		super.init(chunk, handle, offset, length, maxLength);
 		return this;
 	}
 
 	@Override
 	public DirectByteBuffer init(Chunk<ByteBuffer> chunks[],long handleInLastChunk, int offsetInLastChunk,
-			int lengthInLastChunk) {
-		super.init(chunks, handleInLastChunk, offsetInLastChunk, lengthInLastChunk);
+			int lengthInLastChunk, int maxLengthInLastChunk) {
+		super.init(chunks, handleInLastChunk, offsetInLastChunk, lengthInLastChunk, maxLengthInLastChunk);
 		return this;
 	}
 

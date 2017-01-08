@@ -127,8 +127,7 @@ public class Chunk<T> {
 	        if (bitmapIdx == 0) {
 	            byte val = value(memoryMapIdx);
 	            assert val == unusable : String.valueOf(val);
-//	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
-	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity);
+	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
 	        } else {
 	            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
 	        } 
@@ -141,10 +140,8 @@ public class Chunk<T> {
 		bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
         int memoryMapIdx = (int) handle;
 		Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
-//		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
-//				capacity, subpage.getElememtSize());
 		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
-				capacity);
+				capacity, subpage.getElememtSize());
 	}
 	/**
 	*@desc:

@@ -36,6 +36,7 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 	protected List<Chunk<T>> chunkList;
 	protected int offsetInLastChunk;
 	protected int lengthInLastChunk;
+	protected int maxLengthInLastChunk;
 	protected long handle;
 
 	BaseByteBuffer(int mark, int pos, int lim, int cap) {
@@ -57,13 +58,14 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 		this(0, 0, 0, cap);
 	}
 	
-	public BaseByteBuffer<T> init(Chunk<T> chunk, long handle, int offset, int length)
+	BaseByteBuffer<T> init(Chunk<T> chunk, long handle, int offset, int length, int maxLength)
 	{
 		if(!initialized)
 		{
 			chunkList.clear();
 			this.offsetInLastChunk = offset;
 			this.lengthInLastChunk = length;
+			this.maxLengthInLastChunk = maxLength;
 			this.handle = handle;
 			chunkList.add(chunk);
 			initialized = true;
@@ -71,7 +73,7 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 		return this;
 	}
 
-	public BaseByteBuffer<T> init(Chunk<T> chunks[], long handleInLastChunk, int offsetInLastChunk, int lengthInLastChunk)
+	BaseByteBuffer<T> init(Chunk<T> chunks[], long handleInLastChunk, int offsetInLastChunk, int lengthInLastChunk, int maxLengthInLastChunk)
 	{
 		if(!initialized)
 		{
@@ -79,18 +81,20 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 			this.handle = handleInLastChunk;
 			this.offsetInLastChunk = offsetInLastChunk;
 			this.lengthInLastChunk = lengthInLastChunk;
+			this.maxLengthInLastChunk = maxLengthInLastChunk;
 			chunkList.addAll(Arrays.asList(chunks));
 			initialized = true;
 		}
 		return this;
 	}
 	
-	public BaseByteBuffer<T> initUnpooled(Chunk<T> hugeChunk, int capacity)
+	BaseByteBuffer<T> initUnpooled(Chunk<T> hugeChunk, int capacity)
 	{
 		if(!initialized)
 		{
 			chunkList.clear();
 			chunkList.add(hugeChunk);
+			this.lengthInLastChunk = this.maxLengthInLastChunk = capacity;
 			continuity = true;
 			initialized = true;
 		}

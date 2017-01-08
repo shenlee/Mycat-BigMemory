@@ -1,6 +1,12 @@
 package io.mycat.bigmem;
 
+import io.mycat.bigmem.buffer.BaseByteBuffer;
+
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class MemoryAllocatorTest {
 
@@ -8,7 +14,9 @@ public class MemoryAllocatorTest {
 	public void testDirectBufferTiny1()
 	{
 		int capacity = 16 - 1;
-		MemoryAllocator.CURRENT.directBuffer(capacity);
+		BaseByteBuffer buffer = MemoryAllocator.CURRENT.directBuffer(capacity);
+ 
+		assertEquals(buffer.capacity(), 16);
 	}
 	
 	@Test

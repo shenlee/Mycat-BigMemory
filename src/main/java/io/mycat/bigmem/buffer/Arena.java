@@ -85,7 +85,7 @@ public abstract class Arena<T> {
 				final Subpage<T> s = head.next;
 				if(s != head) {
 					long handle = s.allocate();
-					s.getChunk().initBuf(buffer, handle, normalSize);
+					s.getChunk().initBuf(buffer, handle, capacity);
 					return ;
 				}
 			}
