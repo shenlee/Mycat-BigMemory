@@ -1,9 +1,5 @@
-package io.mycat.bigmem;
+package io.mycat.bigmem.buffer;
 
-import io.mycat.bigmem.buffer.Arena;
-import io.mycat.bigmem.buffer.BaseByteBuffer;
-import io.mycat.bigmem.buffer.DirectArena;
-import io.mycat.bigmem.buffer.DirectByteBuffer;
 import io.mycat.bigmem.util.UnsafeUtil;
 
 import java.nio.ByteBuffer;

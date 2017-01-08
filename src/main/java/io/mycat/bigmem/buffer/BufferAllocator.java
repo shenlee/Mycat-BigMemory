@@ -1,6 +1,5 @@
 package io.mycat.bigmem.buffer;
 
-import java.nio.ByteBuffer;
 
 /**
  * allocator , recycle and gc buffers

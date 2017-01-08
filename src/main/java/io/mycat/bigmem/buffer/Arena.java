@@ -31,7 +31,7 @@ public abstract class Arena<T> {
     private final ChunkList<T> q100;
     
     
-	public Arena(int pageSize,int chunkSize,int maxOrder) {
+	protected Arena(int pageSize,int chunkSize,int maxOrder) {
 		this.chunkSize = chunkSize;
 		this.pageSize = pageSize;
 		this.maxOrder = maxOrder;

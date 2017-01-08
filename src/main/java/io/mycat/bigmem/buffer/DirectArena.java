@@ -16,7 +16,7 @@ public class DirectArena extends Arena<ByteBuffer>{
 	 * @param chunkSize
 	 * @param maxOrder
 	 */
-	public DirectArena(int pageSize, int chunkSize, int maxOrder) {
+	DirectArena(int pageSize, int chunkSize, int maxOrder) {
 		super(pageSize, chunkSize, maxOrder);
 	}
 
