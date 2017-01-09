@@ -445,26 +445,6 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 	 */
 	public abstract BaseByteBuffer putChar(int index, char value);
 
-	/**
-	 * Creates a view of this byte buffer as a char buffer.
-	 *
-	 * <p>
-	 * The content of the new buffer will start at this buffer's current
-	 * position. Changes to this buffer's content will be visible in the new
-	 * buffer, and vice versa; the two buffers' position, limit, and mark values
-	 * will be independent.
-	 *
-	 * <p>
-	 * The new buffer's position will be zero, its capacity and its limit will
-	 * be the number of bytes remaining in this buffer divided by two, and its
-	 * mark will be undefined. The new buffer will be direct if, and only if,
-	 * this buffer is direct, and it will be read-only if, and only if, this
-	 * buffer is read-only.
-	 * </p>
-	 *
-	 * @return A new char buffer
-	 */
-	public abstract CharBuffer asCharBuffer();
 
 	/**
 	 * Relative <i>get</i> method for reading a short value.
@@ -550,26 +530,6 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 	 */
 	public abstract BaseByteBuffer putShort(int index, short value);
 
-	/**
-	 * Creates a view of this byte buffer as a short buffer.
-	 *
-	 * <p>
-	 * The content of the new buffer will start at this buffer's current
-	 * position. Changes to this buffer's content will be visible in the new
-	 * buffer, and vice versa; the two buffers' position, limit, and mark values
-	 * will be independent.
-	 *
-	 * <p>
-	 * The new buffer's position will be zero, its capacity and its limit will
-	 * be the number of bytes remaining in this buffer divided by two, and its
-	 * mark will be undefined. The new buffer will be direct if, and only if,
-	 * this buffer is direct, and it will be read-only if, and only if, this
-	 * buffer is read-only.
-	 * </p>
-	 *
-	 * @return A new short buffer
-	 */
-	public abstract ShortBuffer asShortBuffer();
 
 	/**
 	 * Relative <i>get</i> method for reading an int value.
@@ -655,26 +615,6 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 	 */
 	public abstract BaseByteBuffer putInt(int index, int value);
 
-	/**
-	 * Creates a view of this byte buffer as an int buffer.
-	 *
-	 * <p>
-	 * The content of the new buffer will start at this buffer's current
-	 * position. Changes to this buffer's content will be visible in the new
-	 * buffer, and vice versa; the two buffers' position, limit, and mark values
-	 * will be independent.
-	 *
-	 * <p>
-	 * The new buffer's position will be zero, its capacity and its limit will
-	 * be the number of bytes remaining in this buffer divided by four, and its
-	 * mark will be undefined. The new buffer will be direct if, and only if,
-	 * this buffer is direct, and it will be read-only if, and only if, this
-	 * buffer is read-only.
-	 * </p>
-	 *
-	 * @return A new int buffer
-	 */
-	public abstract IntBuffer asIntBuffer();
 
 	/**
 	 * Relative <i>get</i> method for reading a long value.
@@ -761,27 +701,6 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 	public abstract BaseByteBuffer putLong(int index, long value);
 
 	/**
-	 * Creates a view of this byte buffer as a long buffer.
-	 *
-	 * <p>
-	 * The content of the new buffer will start at this buffer's current
-	 * position. Changes to this buffer's content will be visible in the new
-	 * buffer, and vice versa; the two buffers' position, limit, and mark values
-	 * will be independent.
-	 *
-	 * <p>
-	 * The new buffer's position will be zero, its capacity and its limit will
-	 * be the number of bytes remaining in this buffer divided by eight, and its
-	 * mark will be undefined. The new buffer will be direct if, and only if,
-	 * this buffer is direct, and it will be read-only if, and only if, this
-	 * buffer is read-only.
-	 * </p>
-	 *
-	 * @return A new long buffer
-	 */
-	public abstract LongBuffer asLongBuffer();
-
-	/**
 	 * Relative <i>get</i> method for reading a float value.
 	 *
 	 * <p>
@@ -865,26 +784,6 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 	 */
 	public abstract BaseByteBuffer putFloat(int index, float value);
 
-	/**
-	 * Creates a view of this byte buffer as a float buffer.
-	 *
-	 * <p>
-	 * The content of the new buffer will start at this buffer's current
-	 * position. Changes to this buffer's content will be visible in the new
-	 * buffer, and vice versa; the two buffers' position, limit, and mark values
-	 * will be independent.
-	 *
-	 * <p>
-	 * The new buffer's position will be zero, its capacity and its limit will
-	 * be the number of bytes remaining in this buffer divided by four, and its
-	 * mark will be undefined. The new buffer will be direct if, and only if,
-	 * this buffer is direct, and it will be read-only if, and only if, this
-	 * buffer is read-only.
-	 * </p>
-	 *
-	 * @return A new float buffer
-	 */
-	public abstract FloatBuffer asFloatBuffer();
 
 	/**
 	 * Relative <i>get</i> method for reading a double value.
@@ -970,26 +869,8 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
 	 */
 	public abstract BaseByteBuffer putDouble(int index, double value);
 
-	/**
-	 * Creates a view of this byte buffer as a double buffer.
-	 *
-	 * <p>
-	 * The content of the new buffer will start at this buffer's current
-	 * position. Changes to this buffer's content will be visible in the new
-	 * buffer, and vice versa; the two buffers' position, limit, and mark values
-	 * will be independent.
-	 *
-	 * <p>
-	 * The new buffer's position will be zero, its capacity and its limit will
-	 * be the number of bytes remaining in this buffer divided by eight, and its
-	 * mark will be undefined. The new buffer will be direct if, and only if,
-	 * this buffer is direct, and it will be read-only if, and only if, this
-	 * buffer is read-only.
-	 * </p>
-	 *
-	 * @return A new double buffer
-	 */
-	public abstract DoubleBuffer asDoubleBuffer();
+	
+	public abstract  long memoryAddress(int index);
 
     /**
      * Checks the current position against the limit, throwing a {@link
@@ -1033,8 +914,19 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
         return p;
     }
     
+    /**
+     * Checks the given index against the limit, throwing an {@link
+     * IndexOutOfBoundsException} if it is not smaller than the limit
+     * or is smaller than zero.
+     */
     final int checkIndex(int i) {                       // package-private
         if ((i < 0) || (i >= limit))
+            throw new IndexOutOfBoundsException();
+        return i;
+    }
+
+    final int checkIndex(int i, int nb) {               // package-private
+        if ((i < 0) || (nb > limit - i))
             throw new IndexOutOfBoundsException();
         return i;
     }
