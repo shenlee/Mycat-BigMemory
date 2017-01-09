@@ -1,5 +1,6 @@
 package io.mycat.bigmem.buffer;
 
+import io.mycat.bigmem.Handle;
 import io.mycat.bigmem.util.StringUtil;
 
 /**
@@ -84,6 +85,28 @@ public class ChunkList<T> {
 			cur = cur.next;
 		}
 		return false;
+	}
+	
+	
+	/**
+	 * 分配一个normalSize的 的handle
+	 * **/
+	public Handle allocateHandle(int capacity, int normalSize) {
+		if(head == null) return null;
+		Chunk<T> cur = head;
+		while(cur != null) {
+			long handle = cur.allocate(normalSize);
+			if(handle > 0) {
+				Handle handleObj = new Handle(handle, cur, normalSize);
+				if(cur.usage() >= maxUsage) {
+					remove(cur);
+					addChunk(cur);
+				}
+				return handleObj;
+			}
+			cur = cur.next;
+		}
+		return null;
 	}
 	
 	/**

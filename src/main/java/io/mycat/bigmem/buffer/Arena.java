@@ -1,5 +1,6 @@
 package io.mycat.bigmem.buffer;
 
+import io.mycat.bigmem.Handle;
 import io.mycat.bigmem.util.MathUtil;
 import io.mycat.bigmem.util.StringUtil;
 
@@ -13,6 +14,11 @@ public abstract class Arena<T> {
 	 * 
 	 * 
 	 */
+	private final int chunkSizeNum = 4;
+	//hugeChunkSize = ChunkSize * chunkSizeNum
+	private final int hugeChunkSize  ; //
+	private final int chunkSizeMask  ; //
+	private final int chunkShifts;
 	private final int tinySubpagePoolSize = 512 >>> 4;
 	private final int subpageOverflowMask ;
 	protected final int pageSize;
@@ -30,13 +36,21 @@ public abstract class Arena<T> {
     private final ChunkList<T> q075;
     private final ChunkList<T> q100;
     
-    
-	public Arena(int pageSize,int chunkSize,int maxOrder) {
+    /**
+     * @param pageSize 页大小
+     * @param chunkSize chunk的大小
+     * @param maxOrder 完全二叉树多少次层
+     * **/
+  
+	protected Arena(int pageSize,int chunkSize,int maxOrder) {
 		this.chunkSize = chunkSize;
+		this.chunkSizeMask = this.chunkSize - 1;
+		this.chunkShifts = MathUtil.log2p(this.chunkSize);
 		this.pageSize = pageSize;
 		this.maxOrder = maxOrder;
 		this.pageShift = MathUtil.log2p(pageSize);
 		this.subpageOverflowMask = ~(pageSize - 1); /*用来判断是否小于一个pageSize的*/
+		this.hugeChunkSize = chunkSize << chunkSizeNum;
 		tinySubpagePool = newSupagePoolHeader(tinySubpagePoolSize, pageSize , 4);
 		smallSubpagePoolSize = this.pageShift - 9;
 		smallSubpagePool = newSupagePoolHeader(smallSubpagePoolSize, pageSize, 9);
@@ -85,7 +99,7 @@ public abstract class Arena<T> {
 				final Subpage<T> s = head.next;
 				if(s != head) {
 					long handle = s.allocate();
-					s.getChunk().initBuf(buffer, handle, normalSize);
+					s.getChunk().initBuf(buffer, handle, capacity);
 					return ;
 				}
 			}
@@ -95,25 +109,105 @@ public abstract class Arena<T> {
 			//分配大于pageSize 小于chunkSize
 			allocateNormal(buffer, capacity, normalSize);
 			return ;
-		} else {
-			//分配huge
+		} else if(capacity <= hugeChunkSize ) {
 			allocateHuge(buffer, capacity);
-
+		} else	{
+			//分配hugeOrSuper
+			allocateSuper(buffer, capacity);
 		}
 	}
 	
-	 /**
+	@SuppressWarnings("unchecked")
+	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity) {
+		int nChunk = capacity >>> chunkShifts;
+		int lastChunkSize = capacity & chunkSizeMask;
+		Chunk<T>[] chunkArray = null;
+		if(lastChunkSize != 0) {
+			chunkArray = newUpooledChunks(nChunk + 1, true);
+			Handle handle = allocateHandle(lastChunkSize);
+			//把最后一个chunk加入到chunk数组中
+			final Chunk<T> c = handle.getChunk();
+			chunkArray[nChunk] = c;
+			buffer.init(chunkArray, handle.getHandle(), c.getOffsetByHandle(
+					handle.getHandle()), lastChunkSize);
+		} else {
+			chunkArray = newUpooledChunks(nChunk , false);
+			buffer.init(chunkArray, 0L, 0, chunkSize);
+		}
+	}
+	/**
 	*@desc 创建一个hugeChunk 不进入缓存池,并却初始化baseByteBuffer
 	*@auth zhangwy @date 2017年1月2日 下午8:59:37
 	**/
-	private void allocateHuge(BaseByteBuffer<T> buffer, int capacity) {
+	private void allocateSuper(BaseByteBuffer<T> buffer, int capacity) {
 		Chunk<T> hugeChunk = newUnpoolChunk(capacity);
 		buffer.initUnpooled(hugeChunk, capacity);
 	}
 	
+	/**
+	*@desc 分配一个tiny ,small, normal大小的handle
+	*@auth zhangwy @date 2017年1月7日 上午8:13:26
+	**/
+	private Handle allocateHandle(int capacity) {
+		int normalSize = normalizeCapacity(capacity);
+		if(isTinyOrSmall(normalSize)) {
+			Subpage<T>[] table;
+			int tableId;
+			if(isTiny(normalSize)) {
+				table = tinySubpagePool;
+				tableId = tinyId(normalSize);
+			} else {
+				table = smallSubpagePool;
+				tableId = smallId(normalSize);
+			}
+			synchronized (this) {
+				final Subpage<T> head = table[tableId];
+				final Subpage<T> s = head.next;
+				if(s != head) {
+					long handle = s.allocate();
+					return new Handle(handle, s.getChunk(), normalSize);
+				}
+			}
+		} 
+		return allocateNormalHandle(capacity, normalSize);
+	}
+	/**
+	*@desc 
+	*@auth zhangwy @date 2017年1月7日 上午8:31:06
+	**/
+	private synchronized Handle allocateNormalHandle(int capacity, int normalSize) {
+		Handle handleObj = null;
+		if ( (handleObj = q050.allocateHandle(capacity, normalSize)) != null || (handleObj = q025.allocateHandle( capacity, normalSize)) != null
+			|| (handleObj = q000.allocateHandle(capacity, normalSize)) != null || (handleObj = qInit.allocateHandle( capacity, normalSize)) != null
+			|| (handleObj = q075.allocateHandle(capacity, normalSize)) != null || (handleObj = q100.allocateHandle( capacity, normalSize)) != null) {
+	            return handleObj;
+	     }
+        // Add a new chunk.
+       	Chunk<T> c = newChunk();
+        long handle = c.allocate(normalSize);
+        assert handle > 0;
+        qInit.addChunk(c);
+		return new Handle(handle, c, normalSize);
+	}
+	/**
+	*@desc 创建若干不缓存的chunk,然后通过lastElementEmpty判断最后一个是否要放空.
+	*@auth zhangwy @date 2017年1月7日 上午7:54:35
+	**/
+	@SuppressWarnings("unchecked")
+	private Chunk<T>[] newUpooledChunks(int count,boolean lastElementEmpty) {
+		Chunk<T>[] chunkArray = new Chunk[count];
+		int size = count;
+		if(lastElementEmpty) {
+			size = size - 1;
+		}
+		for(int i = 0 ; i < size ; i++) {
+			chunkArray[i] = newUnpoolChunk(chunkSize);
+		}
+		return chunkArray;
+	}
 	
 	/**
-	*@desc
+	*@desc 
 	*@auth zhangwy @date 2017年1月2日 下午8:58:50
 	**/
 	private synchronized void allocateNormal(BaseByteBuffer<T> buffer, int capacity, int normalSize) {
@@ -304,5 +398,12 @@ public abstract class Arena<T> {
 			}
 		}
 	}
+	public int getTinySubpagePoolSize() {
+		return tinySubpagePoolSize;
+	}
+	public int getSmallSubpagePoolSize() {
+		return smallSubpagePoolSize;
+	}
+	
 }
 

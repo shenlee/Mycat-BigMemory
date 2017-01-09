@@ -122,16 +122,16 @@ public class Chunk<T> {
 	*@auth zhangwy @date 2017年1月2日 下午9:17:28
 	**/
 	public void initBuf(BaseByteBuffer<T> byteBuffer ,long handle, int capacity) {
-		 int memoryMapIdx = (int) handle;
-	        int bitmapIdx = (int) (handle >>> Integer.SIZE);
-	        if (bitmapIdx == 0) {
-	            byte val = value(memoryMapIdx);
-	            assert val == unusable : String.valueOf(val);
+		int memoryMapIdx = (int) handle;
+        int bitmapIdx = (int) (handle >>> Integer.SIZE);
+        if (bitmapIdx == 0) {
+            byte val = value(memoryMapIdx);
+            assert val == unusable : String.valueOf(val);
 //	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
-	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity);
-	        } else {
-	            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
-	        } 
+            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity);
+        } else {
+            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
+        } 
 	}
 	/** 初始化small 或者tiny类型的bytebuffer
 	*@desc
@@ -246,8 +246,25 @@ public class Chunk<T> {
 		memoryMap[memoryMapId] = value;
 	} 
 	
-	
+	/**@param handle 分配的句柄
+	 * @return 通过分配的handle返回偏移量
+	 * @author zhangwy
+	 * */
 
+	public int getOffsetByHandle(long handle) {
+		int memoryMapIdx = (int) handle;
+        int bitmapIdx = (int) (handle >>> Integer.SIZE);
+        int offset = 0;
+		if(bitmapIdx == 0) {
+			offset = runOffset(memoryMapIdx);
+		} else {
+			bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
+			Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
+			offset = runOffset(memoryMapIdx) + subpage.getElememtSize() * bitmapIdx;
+		}
+		return offset;
+	}
+	
 	/*    获取当前层数的偏移量然后 * 当前层数一个节点所管理的大小*/
 	private int runOffset(int memoryMapId) {
 		int nodeOffset = memoryMapId ^ (1 << depth[memoryMapId]);

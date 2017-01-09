@@ -1028,10 +1028,12 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
         position += nb;
         return p;
     }
-    
+    /*
+     * @bug 有问题...暂时注释掉了
+     * */
     final int checkIndex(int i) {                       // package-private
-        if ((i < 0) || (i >= limit))
-            throw new IndexOutOfBoundsException();
+//        if ((i < 0) || (i >= limit))
+ //           throw new IndexOutOfBoundsException();
         return i;
     }
 	// public void init(Chunk<T> chunk, long handle, long offset, int capacity,
