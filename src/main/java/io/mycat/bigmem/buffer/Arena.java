@@ -41,7 +41,6 @@ public abstract class Arena<T> {
      * @param chunkSize chunk的大小
      * @param maxOrder 完全二叉树多少次层
      * **/
-  
 	protected Arena(int pageSize,int chunkSize,int maxOrder) {
 		this.chunkSize = chunkSize;
 		this.chunkSizeMask = this.chunkSize - 1;
@@ -128,11 +127,12 @@ public abstract class Arena<T> {
 			//把最后一个chunk加入到chunk数组中
 			final Chunk<T> c = handle.getChunk();
 			chunkArray[nChunk] = c;
+			/*lastMaxChunkSize 需要修改 标注......*/
 			buffer.init(chunkArray, handle.getHandle(), c.getOffsetByHandle(
-					handle.getHandle()), lastChunkSize);
+					handle.getHandle()), lastChunkSize,lastChunkSize);
 		} else {
 			chunkArray = newUpooledChunks(nChunk , false);
-			buffer.init(chunkArray, 0L, 0, chunkSize);
+			buffer.init(chunkArray, 0L, 0, chunkSize ,chunkSize);
 		}
 	}
 	/**

@@ -122,16 +122,15 @@ public class Chunk<T> {
 	*@auth zhangwy @date 2017年1月2日 下午9:17:28
 	**/
 	public void initBuf(BaseByteBuffer<T> byteBuffer ,long handle, int capacity) {
-		int memoryMapIdx = (int) handle;
-        int bitmapIdx = (int) (handle >>> Integer.SIZE);
-        if (bitmapIdx == 0) {
-            byte val = value(memoryMapIdx);
-            assert val == unusable : String.valueOf(val);
-//	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
-            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity);
-        } else {
-            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
-        } 
+		 int memoryMapIdx = (int) handle;
+	        int bitmapIdx = (int) (handle >>> Integer.SIZE);
+	        if (bitmapIdx == 0) {
+	            byte val = value(memoryMapIdx);
+	            assert val == unusable : String.valueOf(val);
+	            byteBuffer.init(this, handle, runOffset(memoryMapIdx), capacity, runLength(memoryMapIdx));
+	        } else {
+	            initBufWithSubpage(byteBuffer, handle, bitmapIdx, capacity);
+	        } 
 	}
 	/** 初始化small 或者tiny类型的bytebuffer
 	*@desc
@@ -141,10 +140,8 @@ public class Chunk<T> {
 		bitmapIdx = bitmapIdx & 0x3FFFFFFF ;
         int memoryMapIdx = (int) handle;
 		Subpage<T> subpage = subpagesList[subpageId(memoryMapIdx)];
-//		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
-//				capacity, subpage.getElememtSize());
 		byteBuffer.init(this, handle, runOffset(memoryMapIdx) + bitmapIdx * subpage.getElememtSize(),
-				capacity);
+				capacity, subpage.getElememtSize());
 	}
 	/**
 	*@desc:
