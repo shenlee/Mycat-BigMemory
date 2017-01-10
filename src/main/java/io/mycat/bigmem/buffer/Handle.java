@@ -1,7 +1,5 @@
 
-package io.mycat.bigmem;
-
-import io.mycat.bigmem.buffer.Chunk;
+package io.mycat.bigmem.buffer;
 
 /**
 *@desc 分配的内存的句柄

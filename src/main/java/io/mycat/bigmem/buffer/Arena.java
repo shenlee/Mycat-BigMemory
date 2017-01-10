@@ -1,6 +1,5 @@
 package io.mycat.bigmem.buffer;
 
-import io.mycat.bigmem.Handle;
 import io.mycat.bigmem.util.MathUtil;
 import io.mycat.bigmem.util.StringUtil;
 
@@ -127,9 +126,9 @@ public abstract class Arena<T> {
 			//把最后一个chunk加入到chunk数组中
 			final Chunk<T> c = handle.getChunk();
 			chunkArray[nChunk] = c;
-			/*lastMaxChunkSize 需要修改 标注......*/
+			int lastChunkNormalSize =  normalizeCapacity(lastChunkSize);
 			buffer.init(chunkArray, handle.getHandle(), c.getOffsetByHandle(
-					handle.getHandle()), lastChunkSize,lastChunkSize);
+					handle.getHandle()), lastChunkSize,lastChunkNormalSize);
 		} else {
 			chunkArray = newUpooledChunks(nChunk , false);
 			buffer.init(chunkArray, 0L, 0, chunkSize ,chunkSize);

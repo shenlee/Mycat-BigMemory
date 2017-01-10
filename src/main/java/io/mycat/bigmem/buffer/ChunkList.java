@@ -1,6 +1,5 @@
 package io.mycat.bigmem.buffer;
 
-import io.mycat.bigmem.Handle;
 import io.mycat.bigmem.util.StringUtil;
 
 /**
