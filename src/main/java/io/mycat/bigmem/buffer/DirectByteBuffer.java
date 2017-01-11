@@ -423,4 +423,38 @@ public class DirectByteBuffer extends BaseByteBuffer<ByteBuffer> {
 		return null;
 	}
 
+	@Override
+	public ReferenceCounted retain() {
+		return null;
+	}
+
+	@Override
+	public ReferenceCounted retain(int increment) {
+		return null;
+	}
+
+	@Override
+	public ReferenceCounted touch() {
+		return null;
+	}
+
+	@Override
+	public ReferenceCounted touch(Object hint) {
+		return null;
+	}
+
+	@Override
+	public boolean release() {
+		return false;
+	}
+
+	@Override
+	public boolean release(int decrement) {
+		return false;
+	}
+
+	@Override
+	public int refCnt() {
+		return 0;
+	}
 }

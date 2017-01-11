@@ -17,7 +17,7 @@ import java.util.Collections;
 import java.util.List;
  
 
-public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>> {
+public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>,ReferenceCounted {
 
 	// Invariants: mark <= position <= limit <= capacity
 	private int mark = -1;
@@ -930,6 +930,26 @@ public abstract class BaseByteBuffer<T> implements Comparable<BaseByteBuffer<T>>
             throw new IndexOutOfBoundsException();
         return i;
     }
+
+	@Override
+	public abstract ReferenceCounted retain();
+
+	@Override
+	public abstract ReferenceCounted retain(int increment);
+
+	@Override
+	public abstract ReferenceCounted touch();
+
+	@Override
+	public abstract ReferenceCounted touch(Object hint);
+
+
+	@Override
+	public abstract boolean release();
+
+	@Override
+	public abstract boolean release(int decrement);
+
 	// public void init(Chunk<T> chunk, long handle, long offset, int capacity,
 	// int maxCapacity) {
 	// this.chunk = chunk;
